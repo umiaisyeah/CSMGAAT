@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DPM Digital — Pencatatan Meter Industri</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root{
+    --ink:#14262A;
+    --paper:#F4F6F1;
+    --surface:#FFFFFF;
+    --primary:#1E4E52;
+    --primary-dark:#0F3438;
+    --primary-tint:#E4EEEC;
+    --accent:#C17A3D;
+    --accent-tint:#F6E9DB;
+    --verified:#3F7D5C;
+    --verified-tint:#E4F0E8;
+    --mismatch:#B2453A;
+    --mismatch-tint:#F7E4E1;
+    --pending:#A6791E;
+    --pending-tint:#F3EAD3;
+    --line:#D7DBD1;
+    --line-soft:#E7E9E1;
+    --muted:#5B6D68;
+    --shadow: 0 1px 2px rgba(15,52,56,.06), 0 6px 20px rgba(15,52,56,.06);
+    --radius:7px;
+    --font-ui:'Space Grotesk', 'IBM Plex Sans', system-ui, sans-serif;
+    --font-body:'IBM Plex Sans', system-ui, sans-serif;
+    --font-mono:'IBM Plex Mono', ui-monospace, monospace;
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark){
+      --ink:#EAF0EE;
+      --paper:#0E1B1D;
+      --surface:#152526;
+      --primary:#5FA6A0;
+      --primary-dark:#3F8580;
+      --primary-tint:#173330;
+      --accent:#E0A268;
+      --accent-tint:#2A2013;
+      --verified:#77C79A;
+      --verified-tint:#132A1E;
+      --mismatch:#E28A7E;
+      --mismatch-tint:#2E1714;
+      --pending:#E3BE6E;
+      --pending-tint:#2B2210;
+      --line:#28403E;
+      --line-soft:#1D3230;
+      --muted:#8FA6A0;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#EAF0EE;
+    --paper:#0E1B1D;
+    --surface:#152526;
+    --primary:#5FA6A0;
+    --primary-dark:#3F8580;
+    --primary-tint:#173330;
+    --accent:#E0A268;
+    --accent-tint:#2A2013;
+    --verified:#77C79A;
+    --verified-tint:#132A1E;
+    --mismatch:#E28A7E;
+    --mismatch-tint:#2E1714;
+    --pending:#E3BE6E;
+    --pending-tint:#2B2210;
+    --line:#28403E;
+    --line-soft:#1D3230;
+    --muted:#8FA6A0;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 24px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--accent-tint);color:var(--ink)}
+  button{font-family:inherit}
+  input,select,textarea{font-family:inherit;color:inherit}
+  a{color:var(--primary)}
+
+  .wrap{max-width:920px;margin:0 auto;padding:0 16px 64px}
+
+  /* ---------- header ---------- */
+  header.app{
+    border-bottom:1px solid var(--line);
+    background:var(--surface);
+  }
+  .app-inner{
+    max-width:920px;margin:0 auto;padding:22px 16px 0;
+  }
+  .brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .brand-mark{
+    font-family:var(--font-mono);font-size:12px;letter-spacing:.03em;
+    color:var(--primary);border:1px solid var(--line);border-radius:4px;
+    padding:2px 6px;
+  }
+  h1{
+    font-family:var(--font-ui);font-weight:600;font-size:22px;margin:6px 0 2px;letter-spacing:-.01em;
+  }
+  .tagline{color:var(--muted);font-size:14px;margin:0 0 18px;max-width:60ch}
+
+  nav.tabs{display:flex;gap:4px;margin-top:6px}
+  .tab-btn{
+    appearance:none;border:1px solid transparent;background:none;
+    font-family:var(--font-ui);font-weight:500;font-size:14.5px;
+    color:var(--muted);padding:10px 4px;cursor:pointer;
+    border-bottom:2px solid transparent;margin-bottom:-1px;
+    transition:color .15s ease;
+  }
+  .tab-btn + .tab-btn{margin-left:22px}
+  .tab-btn:hover{color:var(--ink)}
+  .tab-btn.active{color:var(--primary);border-bottom-color:var(--primary)}
+  .conn-dot{
+    display:inline-block;width:6px;height:6px;border-radius:50%;
+    background:var(--pending);margin-right:6px;vertical-align:middle;
+  }
+  .conn-dot.ok{background:var(--verified)}
+  .conn-dot.off{background:var(--mismatch)}
+  .conn-status{font-family:var(--font-mono);font-size:11.5px;color:var(--muted);float:right;padding-top:14px}
+
+  main{padding-top:22px}
+  .view{display:none}
+  .view.active{display:block}
+
+  /* ---------- generic card / section ---------- */
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);
+  }
+  .step{padding:20px}
+  .step + .step{border-top:1px solid var(--line-soft)}
+  .step-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .step-num{
+    font-family:var(--font-mono);font-size:12px;color:var(--primary);
+    border:1px solid var(--primary);border-radius:50%;
+    width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex:none;
+  }
+  .step-title{font-family:var(--font-ui);font-weight:600;font-size:15.5px}
+  .step-hint{color:var(--muted);font-size:12.5px;margin:2px 0 0 32px}
+
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-left:32px}
+  @media (max-width:600px){.field-row{grid-template-columns:1fr}}
+  .field{margin-left:32px;margin-bottom:14px}
+  .field:last-child{margin-bottom:0}
+  .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px}
+  .field label .req{color:var(--mismatch)}
+  .field input[type=text],.field input[type=number],.field textarea{
+    width:100%;border:1px solid var(--line);border-radius:5px;background:var(--paper);
+    padding:10px 11px;font-size:15px;color:var(--ink);
+  }
+  .field input:focus,.field textarea:focus{outline:2px solid var(--primary);outline-offset:-1px;border-color:var(--primary)}
+  .field textarea{resize:vertical;min-height:64px}
+  .unit-input{display:flex;align-items:stretch}
+  .unit-input input{border-radius:5px 0 0 5px;font-family:var(--font-mono);font-size:17px}
+  .unit-input span{
+    border:1px solid var(--line);border-left:none;background:var(--line-soft);
+    border-radius:0 5px 5px 0;padding:0 12px;display:flex;align-items:center;
+    font-family:var(--font-mono);font-size:13px;color:var(--muted);
+  }
+
+  /* photo */
+  .photo-zone{margin-left:32px}
+  .photo-drop{
+    border:1.5px dashed var(--line);border-radius:6px;padding:22px;text-align:center;
+    cursor:pointer;background:var(--paper);
+  }
+  .photo-drop:hover{border-color:var(--primary)}
+  .photo-drop svg{opacity:.55;margin-bottom:6px}
+  .photo-drop p{margin:0;font-size:13.5px;color:var(--muted)}
+  .photo-preview{position:relative;display:inline-block}
+  .photo-preview img{max-width:100%;max-height:320px;border-radius:6px;border:1px solid var(--line);display:block}
+  .photo-actions{margin-top:8px;display:flex;gap:8px;align-items:center}
+  .photo-filename{
+    font-family:var(--font-mono);font-size:11.5px;color:var(--muted);
+    background:var(--line-soft);border-radius:4px;padding:4px 8px;margin-top:8px;display:inline-block;
+  }
+
+  /* signature */
+  .sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-left:32px}
+  @media (max-width:600px){.sig-grid{grid-template-columns:1fr}}
+  .sig-block label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px}
+  .sig-block input[type=text]{
+    width:100%;border:1px solid var(--line);border-radius:5px;background:var(--paper);
+    padding:9px 10px;font-size:14px;margin-bottom:8px;
+  }
+  .sig-pad-wrap{
+    border:1px solid var(--line);border-radius:6px;background:#fff;position:relative;touch-action:none;
+  }
+  .sig-pad-wrap canvas{display:block;width:100%;height:130px;cursor:crosshair}
+  .sig-baseline{position:absolute;left:10px;right:10px;bottom:26px;border-bottom:1px dashed #cfd3c9;pointer-events:none}
+  .sig-empty-hint{position:absolute;top:44%;left:0;right:0;text-align:center;color:#B7BCB0;font-size:12.5px;pointer-events:none}
+  .sig-foot{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+  .sig-clear{
+    background:none;border:none;color:var(--primary);font-size:12px;cursor:pointer;padding:2px 0;
+    text-decoration:underline;text-underline-offset:2px;
+  }
+
+  .submit-bar{padding:18px 20px;background:var(--primary-tint);border-top:1px solid var(--line);border-radius:0 0 var(--radius) var(--radius);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .btn{
+    appearance:none;border:1px solid var(--primary);background:var(--primary);color:#fff;
+    font-family:var(--font-ui);font-weight:600;font-size:14.5px;border-radius:5px;
+    padding:11px 20px;cursor:pointer;transition:background .15s ease, opacity .15s ease;
+  }
+  .btn:hover{background:var(--primary-dark)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.secondary{background:transparent;color:var(--primary)}
+  .btn.secondary:hover{background:var(--primary-tint)}
+  .btn.danger{background:var(--mismatch);border-color:var(--mismatch)}
+  .btn.danger:hover{background:#8f342b}
+  .btn.small{padding:7px 13px;font-size:13px}
+  .submit-hint{color:var(--muted);font-size:12.5px}
+
+  /* ---------- kantor dashboard ---------- */
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+  @media (max-width:640px){.stat-row{grid-template-columns:1fr 1fr}}
+  .stat{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 15px;
+  }
+  .stat .n{font-family:var(--font-mono);font-size:24px;font-weight:600;display:block}
+  .stat .l{font-size:12px;color:var(--muted)}
+  .stat.pending .n{color:var(--pending)}
+  .stat.sesuai .n{color:var(--verified)}
+  .stat.tidak .n{color:var(--mismatch)}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .filter-pills{display:flex;gap:6px;flex-wrap:wrap}
+  .pill{
+    border:1px solid var(--line);background:var(--surface);border-radius:20px;
+    padding:6px 13px;font-size:13px;cursor:pointer;color:var(--muted);
+  }
+  .pill.active{background:var(--primary);border-color:var(--primary);color:#fff}
+  .search-input{
+    margin-left:auto;border:1px solid var(--line);border-radius:20px;padding:7px 14px;
+    font-size:13.5px;background:var(--surface);min-width:180px;
+  }
+  .date-input{border:1px solid var(--line);border-radius:20px;padding:7px 12px;font-size:13px;background:var(--surface);font-family:var(--font-mono)}
+
+  .list{display:flex;flex-direction:column;gap:8px}
+  .row-card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:13px 15px;display:flex;align-items:center;gap:14px;cursor:pointer;
+    transition:border-color .12s ease;
+  }
+  .row-card:hover{border-color:var(--primary)}
+  .row-thumb{width:52px;height:52px;border-radius:5px;object-fit:cover;flex:none;background:var(--line-soft);border:1px solid var(--line)}
+  .row-main{flex:1;min-width:0}
+  .row-title{font-family:var(--font-ui);font-weight:600;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row-sub{font-size:12.5px;color:var(--muted);margin-top:2px;display:flex;gap:10px;flex-wrap:wrap}
+  .row-meter{font-family:var(--font-mono);font-weight:600;font-size:15px;color:var(--ink);white-space:nowrap}
+  .chip{
+    font-size:11px;font-weight:600;border-radius:20px;padding:4px 10px;white-space:nowrap;
+    letter-spacing:.01em;
+  }
+  .chip.pending{background:var(--pending-tint);color:var(--pending)}
+  .chip.sesuai{background:var(--verified-tint);color:var(--verified)}
+  .chip.tidak_sesuai{background:var(--mismatch-tint);color:var(--mismatch)}
+
+  .empty{
+    text-align:center;padding:52px 20px;color:var(--muted);
+  }
+  .empty svg{opacity:.4;margin-bottom:10px}
+  .empty p{margin:0;font-size:14px}
+
+  /* ---------- modal ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(14,27,29,.5);display:none;
+    align-items:flex-end;justify-content:center;z-index:50;
+  }
+  .overlay.open{display:flex}
+  @media (min-width:720px){.overlay{align-items:center}}
+  .sheet{
+    background:var(--surface);width:100%;max-width:560px;max-height:92vh;overflow-y:auto;
+    border-radius:14px 14px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.25);
+  }
+  @media (min-width:720px){.sheet{border-radius:var(--radius)}}
+  .sheet-head{
+    display:flex;align-items:flex-start;justify-content:space-between;
+    padding:18px 20px 14px;border-bottom:1px solid var(--line-soft);position:sticky;top:0;background:var(--surface);
+  }
+  .sheet-head h2{font-family:var(--font-ui);font-size:17px;margin:0 0 4px}
+  .sheet-close{background:none;border:none;font-size:22px;line-height:1;color:var(--muted);cursor:pointer;padding:2px 6px}
+  .sheet-body{padding:18px 20px}
+  .detail-photo{width:100%;border-radius:6px;border:1px solid var(--line);display:block;margin-bottom:14px;cursor:zoom-in}
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;margin-bottom:16px}
+  .detail-item .l{font-size:11.5px;color:var(--muted);margin-bottom:2px}
+  .detail-item .v{font-size:14.5px}
+  .detail-item.meter .v{font-family:var(--font-mono);font-weight:600;font-size:19px;color:var(--primary)}
+  .detail-sigs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+  .detail-sig-card{border:1px solid var(--line);border-radius:6px;padding:8px;text-align:center;background:var(--paper)}
+  .detail-sig-card img{width:100%;height:70px;object-fit:contain;background:#fff;border-radius:3px}
+  .detail-sig-card .who{font-size:11.5px;color:var(--muted);margin-top:6px}
+  .verify-box{border-top:1px solid var(--line-soft);padding-top:16px}
+  .verify-box label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px}
+  .verify-box input[type=text],.verify-box textarea{
+    width:100%;border:1px solid var(--line);border-radius:5px;background:var(--paper);
+    padding:9px 10px;font-size:14px;margin-bottom:10px;
+  }
+  .verify-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .status-note{margin-top:10px;font-size:12.5px;color:var(--muted)}
+  .current-status{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+
+  .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:60;padding:20px}
+  .lightbox.open{display:flex}
+  .lightbox img{max-width:100%;max-height:100%;border-radius:4px}
+
+  .toast{
+    position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(10px);
+    background:var(--ink);color:var(--paper);padding:11px 18px;border-radius:7px;font-size:13.5px;
+    opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;z-index:70;
+    max-width:90vw;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .footer-note{color:var(--muted);font-size:12px;text-align:center;margin-top:28px}
+</style>
+</head>
+<body>
+
+<header class="app">
+  <div class="app-inner">
+    <span class="conn-status"><span class="conn-dot" id="connDot"></span><span id="connText">menyambungkan…</span></span>
+    <div class="brand">
+      <span class="brand-mark">AETRA · CSM</span>
+    </div>
+    <h1>DPM Digital</h1>
+    <p class="tagline">Pencatatan stand meter air industri — dari formulir kertas ke satu alur digital, foto tersimpan otomatis, dan crosscheck kantor tanpa cocokkan manual.</p>
+    <nav class="tabs">
+      <button class="tab-btn active" data-view="lapangan" type="button">Input Lapangan</button>
+      <button class="tab-btn" data-view="kantor" type="button">Dashboard Kantor</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ========================= VIEW: LAPANGAN ========================= -->
+  <section class="view active" id="view-lapangan">
+    <form class="card" id="formLapangan" autocomplete="off">
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">1</span><span class="step-title">Data industri &amp; stand meter</span></div>
+        <p class="step-hint">Diisi langsung di lokasi, menggantikan formulir DPM kertas.</p>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="fNamaIndustri">Nama industri <span class="req">*</span></label>
+            <input type="text" id="fNamaIndustri" placeholder="cth. PT Sumber Makmur Textile" required>
+          </div>
+          <div class="field">
+            <label for="fNoPelanggan">No. pelanggan <span style="color:var(--muted)">(opsional)</span></label>
+            <input type="text" id="fNoPelanggan" placeholder="cth. IND-00214">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="fAlamat">Lokasi / alamat titik meter <span style="color:var(--muted)">(opsional)</span></label>
+          <input type="text" id="fAlamat" placeholder="cth. Jl. Industri Raya No. 12, Bojong">
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="fStandMeter">Stand meter <span class="req">*</span></label>
+            <div class="unit-input">
+              <input type="number" id="fStandMeter" placeholder="0" inputmode="decimal" step="any" required>
+              <span>m³</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="fNamaPencatat">Nama pencatat meter <span class="req">*</span></label>
+            <input type="text" id="fNamaPencatat" placeholder="Nama Anda" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="fCatatan">Catatan lapangan <span style="color:var(--muted)">(opsional — kondisi meter, kendala akses, dll.)</span></label>
+          <textarea id="fCatatan" placeholder="Tulis jika ada kondisi khusus di lokasi…"></textarea>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">2</span><span class="step-title">Foto stand meter</span></div>
+        <p class="step-hint">Nama file dibuat otomatis dari nama industri &amp; tanggal — tidak perlu rename manual.</p>
+
+        <div class="photo-zone">
+          <div id="photoDropZone" class="photo-drop">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8a2 2 0 0 1 2-2h1.2a1 1 0 0 0 .87-.5l.6-1A2 2 0 0 1 10.4 3.5h3.2a2 2 0 0 1 1.73 1l.6 1a1 1 0 0 0 .87.5H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z"/><circle cx="12" cy="13" r="3.4"/></svg>
+            <p>Ketuk untuk memotret / pilih foto stand meter</p>
+          </div>
+          <div id="photoPreviewZone" style="display:none">
+            <div class="photo-preview">
+              <img id="photoPreviewImg" alt="Pratinjau foto stand meter">
+            </div>
+            <div class="photo-actions">
+              <button type="button" class="btn secondary small" id="btnRetakePhoto">Ambil ulang</button>
+            </div>
+            <span class="photo-filename" id="photoFilenameLabel"></span>
+          </div>
+          <input type="file" accept="image/*" capture="environment" id="fotoInput" hidden>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">3</span><span class="step-title">Tanda tangan digital</span></div>
+        <p class="step-hint">Ditandatangani langsung di layar oleh kedua pihak, menggantikan tanda tangan basah di kertas.</p>
+
+        <div class="sig-grid">
+          <div class="sig-block">
+            <label for="fNamaPencatat2">Pencatat meter</label>
+            <input type="text" id="fNamaPencatat2" placeholder="Nama pencatat" disabled>
+            <div class="sig-pad-wrap" data-sig="pencatat">
+              <canvas></canvas>
+              <div class="sig-baseline"></div>
+              <div class="sig-empty-hint">tanda tangan di sini</div>
+            </div>
+            <div class="sig-foot"><span></span><button type="button" class="sig-clear" data-clear="pencatat">Kosongkan</button></div>
+          </div>
+          <div class="sig-block">
+            <label for="fNamaPerwakilan">Perwakilan industri <span class="req">*</span></label>
+            <input type="text" id="fNamaPerwakilan" placeholder="Nama &amp; jabatan" required>
+            <div class="sig-pad-wrap" data-sig="perwakilan">
+              <canvas></canvas>
+              <div class="sig-baseline"></div>
+              <div class="sig-empty-hint">tanda tangan di sini</div>
+            </div>
+            <div class="sig-foot"><span></span><button type="button" class="sig-clear" data-clear="perwakilan">Kosongkan</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="submit-bar">
+        <button type="submit" class="btn" id="btnSubmit">Kirim DPM</button>
+        <span class="submit-hint" id="submitHint">Data &amp; foto langsung tersimpan dan terkirim ke kantor.</span>
+      </div>
+    </form>
+  </section>
+
+  <!-- ========================= VIEW: KANTOR ========================= -->
+  <section class="view" id="view-kantor">
+
+    <div class="stat-row">
+      <div class="stat"><span class="n" id="statTotal">0</span><span class="l">Total (hari ini)</span></div>
+      <div class="stat pending"><span class="n" id="statPending">0</span><span class="l">Menunggu crosscheck</span></div>
+      <div class="stat sesuai"><span class="n" id="statSesuai">0</span><span class="l">Sesuai</span></div>
+      <div class="stat tidak"><span class="n" id="statTidak">0</span><span class="l">Tidak sesuai</span></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="filter-pills" id="filterPills">
+        <button class="pill active" data-filter="all" type="button">Semua</button>
+        <button class="pill" data-filter="pending" type="button">Menunggu</button>
+        <button class="pill" data-filter="sesuai" type="button">Sesuai</button>
+        <button class="pill" data-filter="tidak_sesuai" type="button">Tidak sesuai</button>
+      </div>
+      <input type="date" class="date-input" id="dateFilter">
+      <input type="text" class="search-input" id="searchInput" placeholder="Cari nama industri…">
+    </div>
+
+    <div class="list" id="kantorList"></div>
+    <div class="empty" id="kantorEmpty" style="display:none">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6M9 16h6M9 8h6M5 4h14v16H5z"/></svg>
+      <p>Belum ada DPM yang cocok dengan filter ini.</p>
+    </div>
+  </section>
+
+  <p class="footer-note">DPM Digital · PT Aetra Air Tangerang — Departemen Customer Service Management</p>
+</main>
+
+<!-- detail sheet -->
+<div class="overlay" id="detailOverlay">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <h2 id="dTitle">—</h2>
+        <div class="current-status" id="dStatusChipWrap"></div>
+      </div>
+      <button class="sheet-close" id="dClose" type="button" aria-label="Tutup">&times;</button>
+    </div>
+    <div class="sheet-body">
+      <img id="dPhoto" class="detail-photo" alt="Foto stand meter">
+      <div class="detail-grid">
+        <div class="detail-item meter"><div class="l">Stand meter</div><div class="v" id="dMeter">—</div></div>
+        <div class="detail-item"><div class="l">Tanggal &amp; waktu</div><div class="v" id="dWaktu">—</div></div>
+        <div class="detail-item"><div class="l">No. pelanggan</div><div class="v" id="dNoPelanggan">—</div></div>
+        <div class="detail-item"><div class="l">Lokasi</div><div class="v" id="dAlamat">—</div></div>
+        <div class="detail-item"><div class="l">Pencatat meter</div><div class="v" id="dPencatat">—</div></div>
+        <div class="detail-item"><div class="l">Perwakilan industri</div><div class="v" id="dPerwakilan">—</div></div>
+      </div>
+      <div id="dCatatanWrap" style="display:none;margin-bottom:16px">
+        <div class="detail-item"><div class="l">Catatan lapangan</div><div class="v" id="dCatatan">—</div></div>
+      </div>
+      <div class="detail-sigs">
+        <div class="detail-sig-card"><img id="dSigPencatat" alt="Tanda tangan pencatat meter"><div class="who">Pencatat meter</div></div>
+        <div class="detail-sig-card"><img id="dSigPerwakilan" alt="Tanda tangan perwakilan industri"><div class="who">Perwakilan industri</div></div>
+      </div>
+
+      <div class="verify-box">
+        <label for="dVerifNama">Nama verifikator (kantor)</label>
+        <input type="text" id="dVerifNama" placeholder="cth. Solihin">
+        <label for="dVerifCatatan">Catatan crosscheck <span style="color:var(--muted)">(wajib bila tidak sesuai)</span></label>
+        <textarea id="dVerifCatatan" placeholder="Tulis alasan bila data &amp; foto tidak cocok…"></textarea>
+        <div class="verify-actions">
+          <button class="btn" id="btnMarkSesuai" type="button">Tandai sesuai</button>
+          <button class="btn danger" id="btnMarkTidak" type="button">Tandai tidak sesuai</button>
+          <button class="btn secondary" id="btnMarkPending" type="button">Kembalikan ke menunggu</button>
+        </div>
+        <p class="status-note" id="dVerifiedNote"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox"><img id="lightboxImg" alt="Foto stand meter — tampilan penuh"></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- small utils ---------------- */
+  const $ = (sel, el) => (el||document).querySelector(sel);
+  const $$ = (sel, el) => Array.from((el||document).querySelectorAll(sel));
+
+  let toastTimer=null;
+  function toast(msg){
+    const t=$('#toast'); t.textContent=msg; t.classList.add('show');
+    clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+  }
+
+  function slugify(s){
+    return (s||'').toString().trim().toLowerCase()
+      .replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'industri';
+  }
+  function todayISO(d){ d=d||new Date(); return d.toISOString().slice(0,10); }
+  function fmtTanggal(iso, jam){
+    if(!iso) return '—';
+    const [y,m,d]=iso.split('-');
+    const bulan=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    return `${parseInt(d,10)} ${bulan[parseInt(m,10)-1]} ${y}` + (jam? ' · '+jam:'');
+  }
+
+  /* ---------------- supabase config ---------------- */
+  // TODO: isi dengan Project URL & anon public key dari Supabase (Settings > API)
+  const SUPABASE_URL = 'https://gjfkulhavzpffnpvfmel.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdqZmt1bGhhdnpwZmZucHZmbWVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3ODc5NjQsImV4cCI6MjEwNTM2Mzk2NH0.jfVgsZSy6Kk2NPkBvIOttLee-cIKd8yem9PxqpxyT_o';
+  const STORAGE_BUCKET = 'dpm-files';
+
+  let sb=null, capReady=false;
+
+  async function initCapabilities(){
+    try{
+      if(SUPABASE_URL.startsWith('GANTI_') || SUPABASE_ANON_KEY.startsWith('GANTI_')){
+        setConn('off','Belum dikonfigurasi — isi SUPABASE_URL & SUPABASE_ANON_KEY');
+        return;
+      }
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      // cek koneksi dengan query ringan
+      const { error } = await sb.from('dpm').select('id', { count:'exact', head:true });
+      if(error) throw error;
+      capReady=true;
+      setConn('ok','Tersambung ke Supabase — data tersimpan otomatis');
+      subscribeList();
+    }catch(e){
+      setConn('off','Gagal menyambung ke Supabase');
+    }
+  }
+  function setConn(state,text){
+    $('#connDot').className='conn-dot'+(state==='ok'?' ok':state==='off'?' off':'');
+    $('#connText').textContent=text;
+  }
+
+  function shortId(){
+    return (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(16).slice(2)).slice(0,8);
+  }
+  async function uploadFile(path, blob, contentType){
+    const { error } = await sb.storage.from(STORAGE_BUCKET).upload(path, blob, { contentType, upsert:false });
+    if(error) throw error;
+    const { data } = sb.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+    return data.publicUrl;
+  }
+  function dataURLtoBlob(dataUrl){
+    return fetch(dataUrl).then(r=>r.blob());
+  }
+
+  /* ---------------- tabs ---------------- */
+  $$('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      $$('.tab-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      $$('.view').forEach(v=>v.classList.remove('active'));
+      $('#view-'+btn.dataset.view).classList.add('active');
+    });
+  });
+
+  /* ---------------- signature pads ---------------- */
+  const sigPads={};
+  function makeSigPad(wrap){
+    const canvas=$('canvas',wrap);
+    const ctx=canvas.getContext('2d');
+    const hint=$('.sig-empty-hint',wrap);
+    let drawing=false, hasDrawn=false, last=null;
+
+    function resize(){
+      const rect=wrap.getBoundingClientRect();
+      const ratio=window.devicePixelRatio||1;
+      const prevW=canvas.width, prevH=canvas.height;
+      const img = hasDrawn ? ctx.getImageData(0,0,prevW||1,prevH||1) : null;
+      canvas.width=rect.width*ratio;
+      canvas.height=130*ratio;
+      ctx.scale(ratio,ratio);
+      ctx.lineWidth=2.1;
+      ctx.lineCap='round';
+      ctx.lineJoin='round';
+      ctx.strokeStyle='#14262A';
+    }
+    resize();
+    window.addEventListener('resize', ()=>{ if(!hasDrawn) resize(); });
+
+    function pos(e){
+      const rect=canvas.getBoundingClientRect();
+      const cx=(e.touches? e.touches[0].clientX : e.clientX);
+      const cy=(e.touches? e.touches[0].clientY : e.clientY);
+      return {x:cx-rect.left, y:cy-rect.top};
+    }
+    function start(e){
+      e.preventDefault();
+      drawing=true; hasDrawn=true; hint.style.display='none';
+      last=pos(e);
+    }
+    function move(e){
+      if(!drawing) return;
+      e.preventDefault();
+      const p=pos(e);
+      ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke();
+      last=p;
+    }
+    function end(){ drawing=false; }
+
+    canvas.addEventListener('pointerdown', start);
+    canvas.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    canvas.style.touchAction='none';
+
+    function clear(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      hasDrawn=false; hint.style.display='block';
+    }
+    function toDataURL(){
+      return hasDrawn ? canvas.toDataURL('image/png') : null;
+    }
+    return {clear, toDataURL, get hasDrawn(){return hasDrawn;}};
+  }
+  $$('.sig-pad-wrap').forEach(wrap=>{
+    sigPads[wrap.dataset.sig]=makeSigPad(wrap);
+  });
+  $$('.sig-clear').forEach(btn=>{
+    btn.addEventListener('click', ()=> sigPads[btn.dataset.clear].clear());
+  });
+
+  /* keep "pencatat" name field in step 1 mirrored into step 3 (disabled display) */
+  $('#fNamaPencatat').addEventListener('input', e=>{
+    $('#fNamaPencatat2').value = e.target.value;
+  });
+
+  /* ---------------- photo capture ---------------- */
+  let photoFile=null;
+  $('#photoDropZone').addEventListener('click', ()=> $('#fotoInput').click());
+  $('#fotoInput').addEventListener('change', e=>{
+    const f=e.target.files[0];
+    if(!f) return;
+    photoFile=f;
+    const url=URL.createObjectURL(f);
+    $('#photoPreviewImg').src=url;
+    $('#photoDropZone').style.display='none';
+    $('#photoPreviewZone').style.display='block';
+    const industri=$('#fNamaIndustri').value || 'industri';
+    $('#photoFilenameLabel').textContent = `${todayISO()}_${slugify(industri)}.jpg  ·  dibuat otomatis`;
+  });
+  $('#btnRetakePhoto').addEventListener('click', ()=>{
+    photoFile=null;
+    $('#fotoInput').value='';
+    $('#photoDropZone').style.display='block';
+    $('#photoPreviewZone').style.display='none';
+  });
+  $('#fNamaIndustri').addEventListener('input', e=>{
+    if(photoFile){
+      $('#photoFilenameLabel').textContent = `${todayISO()}_${slugify(e.target.value)}.jpg  ·  dibuat otomatis`;
+    }
+  });
+
+  /* ---------------- submit DPM ---------------- */
+  $('#formLapangan').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+
+    const namaIndustri=$('#fNamaIndustri').value.trim();
+    const standMeter=$('#fStandMeter').value;
+    const namaPencatat=$('#fNamaPencatat').value.trim();
+    const namaPerwakilan=$('#fNamaPerwakilan').value.trim();
+
+    if(!namaIndustri || standMeter===''||standMeter===null || !namaPencatat || !namaPerwakilan){
+      toast('Lengkapi dulu kolom bertanda *'); return;
+    }
+    if(!photoFile){ toast('Foto stand meter wajib diambil'); return; }
+    if(!sigPads.pencatat.hasDrawn){ toast('Tanda tangan pencatat meter belum diisi'); return; }
+    if(!sigPads.perwakilan.hasDrawn){ toast('Tanda tangan perwakilan industri belum diisi'); return; }
+    if(!capReady){ toast('Belum tersambung ke penyimpanan — coba lagi sesaat lagi'); return; }
+
+    const btn=$('#btnSubmit');
+    btn.disabled=true; btn.textContent='Menyimpan…';
+
+    try{
+      const now=new Date();
+      const tanggal=todayISO(now);
+      const folder=`${tanggal}/${slugify(namaIndustri)}-${shortId()}`;
+
+      const fotoUrl = await uploadFile(`${folder}/stand-meter.jpg`, photoFile, photoFile.type||'image/jpeg');
+      const ttdPencatatBlob = await dataURLtoBlob(sigPads.pencatat.toDataURL());
+      const ttdPencatatUrl = await uploadFile(`${folder}/ttd-pencatat.png`, ttdPencatatBlob, 'image/png');
+      const ttdPerwakilanBlob = await dataURLtoBlob(sigPads.perwakilan.toDataURL());
+      const ttdPerwakilanUrl = await uploadFile(`${folder}/ttd-perwakilan.png`, ttdPerwakilanBlob, 'image/png');
+
+      const row={
+        nama_industri: namaIndustri, no_pelanggan: $('#fNoPelanggan').value.trim(),
+        alamat: $('#fAlamat').value.trim(),
+        stand_meter: parseFloat(standMeter),
+        catatan_lapangan: $('#fCatatan').value.trim(),
+        nama_pencatat: namaPencatat, nama_perwakilan: namaPerwakilan,
+        foto_url: fotoUrl,
+        ttd_pencatat_url: ttdPencatatUrl,
+        ttd_perwakilan_url: ttdPerwakilanUrl,
+        tanggal,
+        waktu: now.toTimeString().slice(0,5),
+        status: 'pending'
+      };
+      const { error } = await sb.from('dpm').insert(row);
+      if(error) throw error;
+      toast(`DPM ${namaIndustri} tersimpan & terkirim ke kantor`);
+      resetForm();
+    }catch(err){
+      toast('Gagal menyimpan. Periksa koneksi dan coba lagi.');
+    }finally{
+      btn.disabled=false; btn.textContent='Kirim DPM';
+    }
+  });
+
+  function resetForm(){
+    $('#formLapangan').reset();
+    photoFile=null;
+    $('#photoDropZone').style.display='block';
+    $('#photoPreviewZone').style.display='none';
+    sigPads.pencatat.clear(); sigPads.perwakilan.clear();
+    $('#fNamaPencatat2').value='';
+  }
+
+  /* ---------------- kantor: state + subscribe ---------------- */
+  let allDocs=[]; // {id, ...data}
+  let activeFilter='all';
+  let activeDate=todayISO();
+  let searchTerm='';
+  let selectedId=null;
+
+  $('#dateFilter').value=activeDate;
+  $('#dateFilter').addEventListener('change', e=>{ activeDate=e.target.value; renderList(); });
+  $('#searchInput').addEventListener('input', e=>{ searchTerm=e.target.value.trim().toLowerCase(); renderList(); });
+  $$('#filterPills .pill').forEach(p=>{
+    p.addEventListener('click', ()=>{
+      $$('#filterPills .pill').forEach(x=>x.classList.remove('active'));
+      p.classList.add('active');
+      activeFilter=p.dataset.filter;
+      renderList();
+    });
+  });
+
+  async function subscribeList(){
+    if(!sb) return;
+    await refreshList();
+    sb.channel('dpm-changes')
+      .on('postgres_changes', { event:'*', schema:'public', table:'dpm' }, ()=> refreshList())
+      .subscribe();
+  }
+  async function refreshList(){
+    const { data, error } = await sb.from('dpm').select('*').order('created_at',{ascending:false}).limit(500);
+    if(error){ setConn('off','Koneksi data terputus'); return; }
+    allDocs = data.map(rowToDoc);
+    renderList();
+  }
+  function rowToDoc(r){
+    return {
+      id:r.id, namaIndustri:r.nama_industri, noPelanggan:r.no_pelanggan, alamat:r.alamat,
+      standMeter:r.stand_meter, catatanLapangan:r.catatan_lapangan,
+      namaPencatat:r.nama_pencatat, namaPerwakilan:r.nama_perwakilan,
+      fotoUrl:r.foto_url, ttdPencatat:r.ttd_pencatat_url, ttdPerwakilan:r.ttd_perwakilan_url,
+      tanggal:r.tanggal, waktu:r.waktu, status:r.status,
+      catatanCrosscheck:r.catatan_crosscheck, diverifikasiOleh:r.diverifikasi_oleh,
+      diverifikasiPada:r.diverifikasi_pada
+    };
+  }
+
+  function renderList(){
+    const total = allDocs.filter(d=>d.tanggal===activeDate);
+    $('#statTotal').textContent=total.length;
+    $('#statPending').textContent=total.filter(d=>d.status==='pending').length;
+    $('#statSesuai').textContent=total.filter(d=>d.status==='sesuai').length;
+    $('#statTidak').textContent=total.filter(d=>d.status==='tidak_sesuai').length;
+
+    let rows=total;
+    if(activeFilter!=='all') rows=rows.filter(d=>d.status===activeFilter);
+    if(searchTerm) rows=rows.filter(d=>(d.namaIndustri||'').toLowerCase().includes(searchTerm));
+
+    const list=$('#kantorList'); list.innerHTML='';
+    $('#kantorEmpty').style.display = rows.length? 'none':'block';
+
+    rows.forEach(d=>{
+      const card=document.createElement('div');
+      card.className='row-card';
+      card.innerHTML=`
+        <img class="row-thumb" src="${d.fotoUrl||''}" alt="" onerror="this.style.visibility='hidden'">
+        <div class="row-main">
+          <div class="row-title">${escapeHtml(d.namaIndustri||'—')}</div>
+          <div class="row-sub">
+            <span>${d.waktu||''}</span>
+            <span>${escapeHtml(d.namaPencatat||'')}</span>
+          </div>
+        </div>
+        <div class="row-meter">${formatMeter(d.standMeter)} m³</div>
+        <span class="chip ${d.status}">${statusLabel(d.status)}</span>
+      `;
+      card.addEventListener('click', ()=> openDetail(d.id));
+      list.appendChild(card);
+    });
+  }
+
+  function formatMeter(v){
+    if(v===undefined||v===null||isNaN(v)) return '—';
+    return Number(v).toLocaleString('id-ID');
+  }
+  function statusLabel(s){
+    return s==='sesuai' ? 'Sesuai' : s==='tidak_sesuai' ? 'Tidak sesuai' : 'Menunggu';
+  }
+  function escapeHtml(s){
+    return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  /* ---------------- detail sheet ---------------- */
+  function openDetail(id){
+    const d=allDocs.find(x=>x.id===id);
+    if(!d) return;
+    selectedId=id;
+    $('#dTitle').textContent=d.namaIndustri||'—';
+    $('#dStatusChipWrap').innerHTML=`<span class="chip ${d.status}">${statusLabel(d.status)}</span>`;
+    $('#dPhoto').src=d.fotoUrl||'';
+    $('#dMeter').textContent=formatMeter(d.standMeter)+' m³';
+    $('#dWaktu').textContent=fmtTanggal(d.tanggal, d.waktu);
+    $('#dNoPelanggan').textContent=d.noPelanggan||'—';
+    $('#dAlamat').textContent=d.alamat||'—';
+    $('#dPencatat').textContent=d.namaPencatat||'—';
+    $('#dPerwakilan').textContent=d.namaPerwakilan||'—';
+    if(d.catatanLapangan){ $('#dCatatanWrap').style.display='block'; $('#dCatatan').textContent=d.catatanLapangan; }
+    else { $('#dCatatanWrap').style.display='none'; }
+    $('#dSigPencatat').src=d.ttdPencatat||'';
+    $('#dSigPerwakilan').src=d.ttdPerwakilan||'';
+    $('#dVerifNama').value=d.diverifikasiOleh||'';
+    $('#dVerifCatatan').value=d.catatanCrosscheck||'';
+    $('#dVerifiedNote').textContent = d.diverifikasiOleh && d.diverifikasiPada
+      ? `Terakhir diverifikasi oleh ${d.diverifikasiOleh} · ${fmtTanggal(d.diverifikasiPada.slice(0,10), d.diverifikasiPada.slice(11,16))}`
+      : '';
+    $('#detailOverlay').classList.add('open');
+  }
+  $('#dClose').addEventListener('click', closeDetail);
+  $('#detailOverlay').addEventListener('click', e=>{ if(e.target.id==='detailOverlay') closeDetail(); });
+  function closeDetail(){ $('#detailOverlay').classList.remove('open'); selectedId=null; }
+
+  $('#dPhoto').addEventListener('click', ()=>{
+    if(!$('#dPhoto').src) return;
+    $('#lightboxImg').src=$('#dPhoto').src;
+    $('#lightbox').classList.add('open');
+  });
+  $('#lightbox').addEventListener('click', ()=> $('#lightbox').classList.remove('open'));
+
+  async function setStatus(status){
+    if(!selectedId){ return; }
+    if(!capReady){ toast('Tidak tersambung — tidak bisa menyimpan perubahan'); return; }
+    const verifNama=$('#dVerifNama').value.trim();
+    const verifCatatan=$('#dVerifCatatan').value.trim();
+    if(status==='tidak_sesuai' && !verifCatatan){
+      toast('Isi catatan crosscheck saat menandai tidak sesuai'); return;
+    }
+    if((status==='sesuai'||status==='tidak_sesuai') && !verifNama){
+      toast('Isi nama verifikator dulu'); return;
+    }
+    try{
+      const { error } = await sb.from('dpm').update({
+        status,
+        catatan_crosscheck: verifCatatan,
+        diverifikasi_oleh: status==='pending' ? null : verifNama,
+        diverifikasi_pada: status==='pending' ? null : new Date().toISOString()
+      }).eq('id', selectedId);
+      if(error) throw error;
+      toast(status==='sesuai' ? 'Ditandai sesuai' : status==='tidak_sesuai' ? 'Ditandai tidak sesuai' : 'Dikembalikan ke menunggu');
+      closeDetail();
+    }catch(err){
+      toast('Gagal menyimpan perubahan status');
+    }
+  }
+  $('#btnMarkSesuai').addEventListener('click', ()=>setStatus('sesuai'));
+  $('#btnMarkTidak').addEventListener('click', ()=>setStatus('tidak_sesuai'));
+  $('#btnMarkPending').addEventListener('click', ()=>setStatus('pending'));
+
+  /* ---------------- boot ---------------- */
+  initCapabilities();
+})();
+</script>
+</body>
+</html>
