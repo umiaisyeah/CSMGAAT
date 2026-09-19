@@ -94,6 +94,7 @@
       height: 8px;
       border-radius: 50%;
       background: #94A3B8;
+      transition: background 0.3s;
     }
     .conn-dot.ok { background: #10B981; }
     .conn-dot.off { background: #EF4444; }
@@ -106,6 +107,8 @@
       padding: 4px;
       border-radius: var(--radius);
       margin-bottom: 20px;
+      position: relative;
+      z-index: 10;
     }
 
     .tab-btn {
@@ -118,6 +121,8 @@
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s ease;
+      outline: none;
+      user-select: none;
     }
 
     .tab-btn.active {
@@ -128,7 +133,7 @@
 
     /* Views & Cards */
     .view { display: none; }
-    .view.active { display: block; }
+    .view.active { display: block !important; }
 
     .card {
       background: var(--card-bg);
@@ -243,6 +248,16 @@
       font-size: 13px;
     }
 
+    /* List Data Kantor */
+    .dpm-item {
+      padding: 12px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .dpm-item:last-child { border-bottom: none; }
+
     /* Toast Notification */
     #toast {
       visibility: hidden;
@@ -295,8 +310,8 @@
 
   <!-- Navigation Tabs -->
   <div class="nav-tabs">
-    <button class="tab-btn active" data-view="lapangan">Form Lapangan</button>
-    <button class="tab-btn" data-view="kantor">Dashboard Kantor</button>
+    <button class="tab-btn active" id="btnTabLapangan" data-view="lapangan">Form Lapangan</button>
+    <button class="tab-btn" id="btnTabKantor" data-view="kantor">Dashboard Kantor</button>
   </div>
 
   <!-- View Form Lapangan -->
@@ -381,10 +396,13 @@
         <input type="text" id="searchInput" placeholder="Cari Pelanggan...">
       </div>
     </div>
-    <div id="kantorEmpty" class="card" style="text-align: center; color: var(--text-muted);">
-      Belum ada data DPM yang tercatat.
+    <div class="card">
+      <div class="card-title">Riwayat Pencatatan</div>
+      <div id="kantorEmpty" style="text-align: center; color: var(--text-muted); padding: 12px;">
+        Memuat data DPM...
+      </div>
+      <div id="kantorList"></div>
     </div>
-    <div id="kantorList"></div>
   </div>
 </div>
 
@@ -417,7 +435,7 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdqZmt1bGhhdnpwZmZucHZmbWVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3ODc5NjQsImV4cCI6MjEwNTM2Mzk2NH0.jfVgsZSy6Kk2NPkBvIOttLee-cIKd8yem9PxqpxyT_o';
   const STORAGE_BUCKET = 'dpm-files';
 
-  let sb = null, capReady = false;
+  let sb = null;
   let rawPhotoFile = null;
 
   const sigPads = { pencatat: null, perwakilan: null };
@@ -425,24 +443,98 @@
 
   /* Inisialisasi Koneksi */
   async function initCapabilities(){
+    const connDot = $('#connDot');
+    const connText = $('#connText');
+
     try {
-      if (typeof supabase === 'undefined') throw new Error("Supabase SDK tidak ditemukan.");
+      if (typeof supabase === 'undefined') {
+        throw new Error("Library Supabase belum dimuat.");
+      }
+      
       sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       
-      // Ping database Supabase
+      // Ping ringan ke Supabase
       const { data, error } = await sb.from('dpm').select('id').limit(1);
+
+      if (error && error.code !== 'PGRST116') {
+        // Jika ada error respon API Supabase
+        console.warn("Respon Supabase:", error);
+      }
       
-      $('#connDot').className = 'conn-dot ok';
-      $('#connText').textContent = 'Terhubung';
-      capReady = true;
+      if (connDot) connDot.className = 'conn-dot ok';
+      if (connText) connText.textContent = 'Terhubung';
     } catch(err) {
-      $('#connDot').className = 'conn-dot off';
-      $('#connText').textContent = 'Offline';
-      console.warn("Status Koneksi Supabase:", err.message);
+      if (connDot) connDot.className = 'conn-dot off';
+      if (connText) connText.textContent = 'Offline';
+      console.error("Gagal terhubung ke Supabase:", err.message);
     }
   }
 
-  /* Setup Signature Pad Canvas */
+  /* Function untuk mengambil data Dashboard Kantor */
+  async function loadDashboardData(){
+    const listEl = $('#kantorList');
+    const emptyEl = $('#kantorEmpty');
+
+    if(!listEl) return;
+    if(!sb){
+      emptyEl.style.display = 'block';
+      emptyEl.textContent = 'Gagal memuat data (Status Offline)';
+      return;
+    }
+
+    try {
+      emptyEl.style.display = 'block';
+      emptyEl.textContent = 'Memuat data DPM...';
+      listEl.innerHTML = '';
+
+      const { data, error } = await sb.from('dpm').select('*').order('created_at', { ascending: false }).limit(20);
+
+      if(error) throw error;
+
+      if(!data || data.length === 0){
+        emptyEl.style.display = 'block';
+        emptyEl.textContent = 'Belum ada data DPM yang tercatat.';
+        return;
+      }
+
+      emptyEl.style.display = 'none';
+      data.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'dpm-item';
+        row.innerHTML = `
+          <div>
+            <strong>${item.nama_industri || 'Tanpa Nama'}</strong><br>
+            <small style="color:var(--text-muted);">${item.tanggal || '-'} | Stand: ${item.stand_meter || 0} m³</small>
+          </div>
+          <span style="font-size:12px; font-weight:bold; color:var(--aetra-blue-primary);">${item.nama_pencatat || '-'}</span>
+        `;
+        listEl.appendChild(row);
+      });
+    } catch(err) {
+      console.error("Error load dashboard:", err);
+      emptyEl.style.display = 'block';
+      emptyEl.textContent = 'Gagal memuat data dari database.';
+    }
+  }
+
+  /* Setup Navigation Tabs */
+  function setupTabs(){
+    const tabBtns = $$('.tab-btn');     tabBtns.forEach(btn => {       btn.addEventListener('click', (e) => {         e.preventDefault();         const viewName = btn.getAttribute('data-view');                  tabBtns.forEach(b => b.classList.remove('active'));         btn.classList.add('active');          $$('.view').forEach(v => {
+          v.classList.remove('active');
+          if (v.id === `view-${viewName}`) {
+            v.classList.add('active');
+          }
+        });
+
+        // Jika klik tab Dashboard Kantor, muat datanya
+        if(viewName === 'kantor') {
+          loadDashboardData();
+        }
+      });
+    });
+  }
+
+  /* Setup Signature Canvas */
   function setupSignaturePads(){
     $$('.sig-pad-wrap').forEach(wrap => {       const type = wrap.dataset.sig;       const canvas = wrap.querySelector('canvas');       if(!canvas) return;       const ctx = canvas.getContext('2d');        function resize(){         const rect = wrap.getBoundingClientRect();         canvas.width = rect.width \vert{}\vert{} 300;         canvas.height = 140;         ctx.lineWidth = 2.5;         ctx.lineCap = 'round';         ctx.strokeStyle = '#005B9E';       }       resize();       window.addEventListener('resize', resize);        let drawing = false;       function getPos(e){         const rect = canvas.getBoundingClientRect();         const clientX = e.touches ? e.touches[0].clientX : e.clientX;         const clientY = e.touches ? e.touches[0].clientY : e.clientY;         return { x: clientX - rect.left, y: clientY - rect.top };       }        function start(e){         drawing = true;         const pos = getPos(e);         ctx.beginPath();         ctx.moveTo(pos.x, pos.y);         const hint = wrap.querySelector('.sig-empty-hint');         if(hint) hint.style.display = 'none';         sigDrawn[type] = true;       }        function move(e){         if(!drawing) return;         const pos = getPos(e);         ctx.lineTo(pos.x, pos.y);         ctx.stroke();       }        function stop(){ drawing = false; }        canvas.addEventListener('mousedown', start);       canvas.addEventListener('mousemove', move);       window.addEventListener('mouseup', stop);        canvas.addEventListener('touchstart', (e) => { start(e); e.preventDefault(); }, {passive: false});       canvas.addEventListener('touchmove', (e) => { move(e); e.preventDefault(); }, {passive: false});       canvas.addEventListener('touchend', stop);        sigPads[type] = { canvas, ctx, wrap };     });      $$
 ('[data-clear]').forEach(btn => {
@@ -565,22 +657,23 @@
 
       toast('Data DPM Digital berhasil dikirim!');
       $('#formLapangan').reset();
-      if($('#btnRetakePhoto')) $('#btnRetakePhoto').click();
-      $$('[data-clear]').forEach(b => b.click());      } catch(err) {       console.error(err);       toast('Gagal mengirim: ' + (err.message \vert{}\vert{} 'Periksa koneksi/RLS Supabase'));     } finally {       btnSubmit.disabled = false;       btnSubmit.textContent = 'Kirim DPM Digital';     }   }    function setupTabs(){     $$
-('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const viewName = btn.dataset.view;
-        $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === viewName));$$
-('.view').forEach(v => v.classList.toggle('active', v.id === `view-${viewName}`));
-      });
-    });
+      if($('#btnRetakePhoto')) $('#btnRetakePhoto').click();       $$('[data-clear]').forEach(b => b.click());
+
+    } catch(err) {
+      console.error(err);
+      toast('Gagal mengirim: ' + (err.message || 'Periksa koneksi/RLS Supabase'));
+    } finally {
+      btnSubmit.disabled = false;
+      btnSubmit.textContent = 'Kirim DPM Digital';
+    }
   }
 
+  // Menjalankan saat DOM Siap
   document.addEventListener('DOMContentLoaded', () => {
+    setupTabs();
     initCapabilities();
     setupSignaturePads();
     setupFormHandlers();
-    setupTabs();
   });
 
 })();
