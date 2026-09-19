@@ -540,6 +540,17 @@
     clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
   }
 
+  function describeError(err){
+    if(!err) return 'penyebab tidak diketahui';
+    const msg = err.message || err.error_description || err.statusText || String(err);
+    if(/row-level security|RLS/i.test(msg)) return 'kebijakan akses (RLS) database/storage belum diizinkan — cek langkah SQL & bucket';
+    if(/Bucket not found/i.test(msg)) return 'bucket "dpm-files" belum dibuat di Supabase Storage';
+    if(/Failed to fetch|NetworkError|CORS/i.test(msg)) return 'tidak bisa menghubungi Supabase — cek SUPABASE_URL / koneksi internet';
+    if(/JWT|Invalid API key|apikey/i.test(msg)) return 'SUPABASE_ANON_KEY salah/kosong';
+    if(/relation .* does not exist/i.test(msg)) return 'tabel "dpm" belum dibuat — jalankan supabase-schema.sql';
+    return msg;
+  }
+
   function slugify(s){
     return (s||'').toString().trim().toLowerCase()
       .replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'industri';
@@ -554,8 +565,8 @@
 
   /* ---------------- supabase config ---------------- */
   // TODO: isi dengan Project URL & anon public key dari Supabase (Settings > API)
-  const SUPABASE_URL = 'https://gjfkulhavzpffnpvfmel.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdqZmt1bGhhdnpwZmZucHZmbWVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3ODc5NjQsImV4cCI6MjEwNTM2Mzk2NH0.jfVgsZSy6Kk2NPkBvIOttLee-cIKd8yem9PxqpxyT_o';
+  const SUPABASE_URL = 'GANTI_DENGAN_SUPABASE_URL';
+  const SUPABASE_ANON_KEY = 'GANTI_DENGAN_SUPABASE_ANON_KEY';
   const STORAGE_BUCKET = 'dpm-files';
 
   let sb=null, capReady=false;
@@ -574,7 +585,8 @@
       setConn('ok','Tersambung ke Supabase — data tersimpan otomatis');
       subscribeList();
     }catch(e){
-      setConn('off','Gagal menyambung ke Supabase');
+      console.error('Supabase init error:', e);
+      setConn('off','Gagal menyambung: '+describeError(e));
     }
   }
   function setConn(state,text){
@@ -750,7 +762,8 @@
       toast(`DPM ${namaIndustri} tersimpan & terkirim ke kantor`);
       resetForm();
     }catch(err){
-      toast('Gagal menyimpan. Periksa koneksi dan coba lagi.');
+      console.error('Gagal menyimpan DPM:', err);
+      toast('Gagal menyimpan: '+describeError(err));
     }finally{
       btn.disabled=false; btn.textContent='Kirim DPM';
     }
@@ -912,7 +925,8 @@
       toast(status==='sesuai' ? 'Ditandai sesuai' : status==='tidak_sesuai' ? 'Ditandai tidak sesuai' : 'Dikembalikan ke menunggu');
       closeDetail();
     }catch(err){
-      toast('Gagal menyimpan perubahan status');
+      console.error('Gagal update status DPM:', err);
+      toast('Gagal menyimpan perubahan: '+describeError(err));
     }
   }
   $('#btnMarkSesuai').addEventListener('click', ()=>setStatus('sesuai'));
