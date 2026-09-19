@@ -8,13 +8,13 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
-      --aetra-blue-primary: #005B9E;  /* Biru Utama Aetra */
-      --aetra-blue-light: #00A3E0;    /* Biru Cyan Aetra */
-      --aetra-orange: #FF6B00;        /* Oranye Aksen Aetra */
-      --bg-main: #F4F7FA;             /* Latar Terang Bersih */
-      --card-bg: #FFFFFF;             /* Kartu Putih */
-      --text-main: #1E293B;           /* Teks Gelap/Jelas */
-      --text-muted: #64748B;          /* Teks Sekunder */
+      --aetra-blue-primary: #005B9E;
+      --aetra-blue-light: #00A3E0;
+      --aetra-orange: #FF6B00;
+      --bg-main: #F4F7FA;
+      --card-bg: #FFFFFF;
+      --text-main: #1E293B;
+      --text-muted: #64748B;
       --border-color: #E2E8F0;
       --radius: 10px;
     }
@@ -107,8 +107,6 @@
       padding: 4px;
       border-radius: var(--radius);
       margin-bottom: 20px;
-      position: relative;
-      z-index: 10;
     }
 
     .tab-btn {
@@ -122,7 +120,6 @@
       cursor: pointer;
       transition: all 0.2s ease;
       outline: none;
-      user-select: none;
     }
 
     .tab-btn.active {
@@ -131,7 +128,7 @@
       box-shadow: 0 2px 6px rgba(255, 107, 0, 0.3);
     }
 
-    /* Views & Cards */
+    /* Views */
     .view { display: none; }
     .view.active { display: block !important; }
 
@@ -205,7 +202,7 @@
       pointer-events: none;
     }
 
-    /* Action Buttons */
+    /* Buttons */
     .btn-secondary {
       background: #F1F5F9;
       color: var(--text-muted);
@@ -229,13 +226,8 @@
       font-weight: 700;
       cursor: pointer;
       box-shadow: 0 4px 12px rgba(255, 107, 0, 0.25);
-      transition: transform 0.1s ease;
     }
 
-    .btn-submit:active { transform: scale(0.98); }
-    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
-
-    /* Photo Dropzone */
     .photo-dropzone {
       border: 2px dashed var(--border-color);
       background: #F8FAFC;
@@ -248,7 +240,6 @@
       font-size: 13px;
     }
 
-    /* List Data Kantor */
     .dpm-item {
       padding: 12px;
       border-bottom: 1px solid var(--border-color);
@@ -256,9 +247,7 @@
       justify-content: space-between;
       align-items: center;
     }
-    .dpm-item:last-child { border-bottom: none; }
 
-    /* Toast Notification */
     #toast {
       visibility: hidden;
       min-width: 280px;
@@ -273,24 +262,15 @@
       bottom: 24px;
       transform: translateX(-50%);
       font-size: 13px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
 
-    #toast.show {
-      visibility: visible;
-      animation: fadeInUp 0.3s forwards;
-    }
-
-    @keyframes fadeInUp {
-      from { opacity: 0; transform: translate(-50%, 20px); }
-      to { opacity: 1; transform: translate(-50%, 0); }
-    }
+    #toast.show { visibility: visible; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <!-- Header Bar dengan Logo Aetra -->
+  <!-- Header Bar -->
   <div class="header-bar">
     <div class="brand-title">
       <img 
@@ -310,8 +290,8 @@
 
   <!-- Navigation Tabs -->
   <div class="nav-tabs">
-    <button class="tab-btn active" id="btnTabLapangan" data-view="lapangan">Form Lapangan</button>
-    <button class="tab-btn" id="btnTabKantor" data-view="kantor">Dashboard Kantor</button>
+    <button type="button" class="tab-btn active" onclick="switchTab('lapangan')">Form Lapangan</button>
+    <button type="button" class="tab-btn" onclick="switchTab('kantor')">Dashboard Kantor</button>
   </div>
 
   <!-- View Form Lapangan -->
@@ -343,7 +323,6 @@
           <input type="file" id="fotoInput" accept="image/*" style="display:none">
           <div id="photoPreviewZone" style="display:none; text-align: center; margin-top: 10px;">
             <img id="photoPreviewImg" style="max-width: 100%; max-height: 180px; border-radius: 8px;"><br>
-            <span id="photoFilenameLabel" style="font-size: 11px; color: var(--text-muted);"></span><br>
             <button type="button" id="btnRetakePhoto" class="btn-secondary">Ganti Foto</button>
           </div>
         </div>
@@ -390,16 +369,9 @@
   <!-- View Dashboard Kantor -->
   <div id="view-kantor" class="view">
     <div class="card">
-      <div class="card-title">Pencarian Data DPM</div>
-      <div style="display: flex; gap: 8px;">
-        <input type="date" id="dateFilter">
-        <input type="text" id="searchInput" placeholder="Cari Pelanggan...">
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title">Riwayat Pencatatan</div>
-      <div id="kantorEmpty" style="text-align: center; color: var(--text-muted); padding: 12px;">
-        Memuat data DPM...
+      <div class="card-title">Riwayat Pencatatan DPM</div>
+      <div id="kantorStatus" style="text-align: center; color: var(--text-muted); padding: 12px;">
+        Klik tab ini untuk memuat data.
       </div>
       <div id="kantorList"></div>
     </div>
@@ -409,274 +381,103 @@
 <div id="toast">Notifikasi</div>
 
 <script>
-(function(){
-  "use strict";
-
-  const $ = (sel, el) => (el \vert{}\vert{} document).querySelector(sel);   const $$ = (sel, el) => Array.from((el || document).querySelectorAll(sel));
-
-  let toastTimer = null;
-  function toast(msg){
-    const t = $('#toast');
-    if(!t) return;
-    t.textContent = msg;
-    t.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
-  }
-
-  function slugify(s){
-    return (s || '').toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'industri';
-  }
-
-  function todayISO(d){ d = d || new Date(); return d.toISOString().slice(0, 10); }
-
-  /* Configuration Supabase */
+  // Konfigurasi Supabase
   const SUPABASE_URL = 'https://gjfkulhavzpffnpvfmel.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdqZmt1bGhhdnpwZmZucHZmbWVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3ODc5NjQsImV4cCI6MjEwNTM2Mzk2NH0.jfVgsZSy6Kk2NPkBvIOttLee-cIKd8yem9PxqpxyT_o';
-  const STORAGE_BUCKET = 'dpm-files';
-
   let sb = null;
-  let rawPhotoFile = null;
 
-  const sigPads = { pencatat: null, perwakilan: null };
-  const sigDrawn = { pencatat: false, perwakilan: false };
+  // 1. Fungsi Switch Tab (Global & Langsung Bekerja)
+  function switchTab(viewName) {
+    const btns = document.querySelectorAll('.tab-btn');
+    const views = document.querySelectorAll('.view');
 
-  /* Inisialisasi Koneksi */
-  async function initCapabilities(){
-    const connDot = $('#connDot');
-    const connText = $('#connText');
+    btns.forEach(b => b.classList.remove('active'));
+    views.forEach(v => v.classList.remove('active'));
 
-    try {
-      if (typeof supabase === 'undefined') {
-        throw new Error("Library Supabase belum dimuat.");
-      }
-      
-      sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      
-      // Ping ringan ke Supabase
-      const { data, error } = await sb.from('dpm').select('id').limit(1);
-
-      if (error && error.code !== 'PGRST116') {
-        // Jika ada error respon API Supabase
-        console.warn("Respon Supabase:", error);
-      }
-      
-      if (connDot) connDot.className = 'conn-dot ok';
-      if (connText) connText.textContent = 'Terhubung';
-    } catch(err) {
-      if (connDot) connDot.className = 'conn-dot off';
-      if (connText) connText.textContent = 'Offline';
-      console.error("Gagal terhubung ke Supabase:", err.message);
+    if (viewName === 'lapangan') {
+      btns[0].classList.add('active');
+      document.getElementById('view-lapangan').classList.add('active');
+    } else {
+      btns[1].classList.add('active');
+      document.getElementById('view-kantor').classList.add('active');
+      loadDashboardData();
     }
   }
 
-  /* Function untuk mengambil data Dashboard Kantor */
-  async function loadDashboardData(){
-    const listEl = $('#kantorList');
-    const emptyEl = $('#kantorEmpty');
+  // 2. Inisialisasi Koneksi Supabase dengan Timeout 3 Detik
+  async function initSupabase() {
+    const dot = document.getElementById('connDot');
+    const text = document.getElementById('connText');
 
-    if(!listEl) return;
-    if(!sb){
-      emptyEl.style.display = 'block';
-      emptyEl.textContent = 'Gagal memuat data (Status Offline)';
+    try {
+      if (typeof supabase === 'undefined') throw new Error("Supabase SDK tidak termuat");
+      sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      // Kunci timeout jika network menggantung
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout")), 3000)
+      );
+
+      await Promise.race([
+        sb.from('dpm').select('id').limit(1),
+        timeoutPromise
+      ]);
+
+      dot.className = 'conn-dot ok';
+      text.textContent = 'Terhubung';
+    } catch (err) {
+      console.warn("Status koneksi:", err.message);
+      dot.className = 'conn-dot off';
+      text.textContent = 'Offline';
+    }
+  }
+
+  // 3. Load Data Dashboard Kantor
+  async function loadDashboardData() {
+    const statusEl = document.getElementById('kantorStatus');
+    const listEl = document.getElementById('kantorList');
+
+    if (!sb) {
+      statusEl.textContent = 'Status Offline / Tidak terhubung ke Supabase.';
       return;
     }
 
-    try {
-      emptyEl.style.display = 'block';
-      emptyEl.textContent = 'Memuat data DPM...';
-      listEl.innerHTML = '';
+    statusEl.textContent = 'Memuat data...';
+    listEl.innerHTML = '';
 
+    try {
       const { data, error } = await sb.from('dpm').select('*').order('created_at', { ascending: false }).limit(20);
 
-      if(error) throw error;
+      if (error) throw error;
 
-      if(!data || data.length === 0){
-        emptyEl.style.display = 'block';
-        emptyEl.textContent = 'Belum ada data DPM yang tercatat.';
+      if (!data || data.length === 0) {
+        statusEl.textContent = 'Belum ada data DPM yang tersimpan.';
         return;
       }
 
-      emptyEl.style.display = 'none';
+      statusEl.style.display = 'none';
       data.forEach(item => {
-        const row = document.createElement('div');
-        row.className = 'dpm-item';
-        row.innerHTML = `
+        const div = document.createElement('div');
+        div.className = 'dpm-item';
+        div.innerHTML = `
           <div>
-            <strong>${item.nama_industri || 'Tanpa Nama'}</strong><br>
+            <strong>${item.nama_industri || 'Pelanggan'}</strong><br>
             <small style="color:var(--text-muted);">${item.tanggal || '-'} | Stand: ${item.stand_meter || 0} m³</small>
           </div>
           <span style="font-size:12px; font-weight:bold; color:var(--aetra-blue-primary);">${item.nama_pencatat || '-'}</span>
         `;
-        listEl.appendChild(row);
+        listEl.appendChild(div);
       });
-    } catch(err) {
-      console.error("Error load dashboard:", err);
-      emptyEl.style.display = 'block';
-      emptyEl.textContent = 'Gagal memuat data dari database.';
+    } catch (err) {
+      statusEl.style.display = 'block';
+      statusEl.textContent = 'Gagal memuat data (Tabel belum ada atau diblokir RLS).';
     }
   }
 
-  /* Setup Navigation Tabs */
-  function setupTabs(){
-    const tabBtns = $$('.tab-btn');     tabBtns.forEach(btn => {       btn.addEventListener('click', (e) => {         e.preventDefault();         const viewName = btn.getAttribute('data-view');                  tabBtns.forEach(b => b.classList.remove('active'));         btn.classList.add('active');          $$('.view').forEach(v => {
-          v.classList.remove('active');
-          if (v.id === `view-${viewName}`) {
-            v.classList.add('active');
-          }
-        });
-
-        // Jika klik tab Dashboard Kantor, muat datanya
-        if(viewName === 'kantor') {
-          loadDashboardData();
-        }
-      });
-    });
-  }
-
-  /* Setup Signature Canvas */
-  function setupSignaturePads(){
-    $$('.sig-pad-wrap').forEach(wrap => {       const type = wrap.dataset.sig;       const canvas = wrap.querySelector('canvas');       if(!canvas) return;       const ctx = canvas.getContext('2d');        function resize(){         const rect = wrap.getBoundingClientRect();         canvas.width = rect.width \vert{}\vert{} 300;         canvas.height = 140;         ctx.lineWidth = 2.5;         ctx.lineCap = 'round';         ctx.strokeStyle = '#005B9E';       }       resize();       window.addEventListener('resize', resize);        let drawing = false;       function getPos(e){         const rect = canvas.getBoundingClientRect();         const clientX = e.touches ? e.touches[0].clientX : e.clientX;         const clientY = e.touches ? e.touches[0].clientY : e.clientY;         return { x: clientX - rect.left, y: clientY - rect.top };       }        function start(e){         drawing = true;         const pos = getPos(e);         ctx.beginPath();         ctx.moveTo(pos.x, pos.y);         const hint = wrap.querySelector('.sig-empty-hint');         if(hint) hint.style.display = 'none';         sigDrawn[type] = true;       }        function move(e){         if(!drawing) return;         const pos = getPos(e);         ctx.lineTo(pos.x, pos.y);         ctx.stroke();       }        function stop(){ drawing = false; }        canvas.addEventListener('mousedown', start);       canvas.addEventListener('mousemove', move);       window.addEventListener('mouseup', stop);        canvas.addEventListener('touchstart', (e) => { start(e); e.preventDefault(); }, {passive: false});       canvas.addEventListener('touchmove', (e) => { move(e); e.preventDefault(); }, {passive: false});       canvas.addEventListener('touchend', stop);        sigPads[type] = { canvas, ctx, wrap };     });      $$
-('[data-clear]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const type = btn.dataset.clear;
-        const pad = sigPads[type];
-        if(pad){
-          pad.ctx.clearRect(0, 0, pad.canvas.width, pad.canvas.height);
-          const hint = pad.wrap.querySelector('.sig-empty-hint');
-          if(hint) hint.style.display = 'block';
-          sigDrawn[type] = false;
-        }
-      });
-    });
-  }
-
-  /* Handler Event Form */
-  function setupFormHandlers(){
-    const dropZone = $('#photoDropZone');
-    const fileInput = $('#fotoInput');
-
-    if(dropZone && fileInput){
-      dropZone.addEventListener('click', () => fileInput.click());
-      fileInput.addEventListener('change', (e) => {
-        if(e.target.files && e.target.files[0]){
-          rawPhotoFile = e.target.files[0];
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            $('#photoPreviewImg').src = ev.target.result;
-            dropZone.style.display = 'none';
-            $('#photoPreviewZone').style.display = 'block';
-            $('#photoFilenameLabel').textContent = `${slugify($('#fNamaIndustri').value || 'meter')}_${todayISO()}.jpg`;
-          };
-          reader.readAsDataURL(rawPhotoFile);
-        }
-      });
-    }
-
-    if($('#btnRetakePhoto')){
-      $('#btnRetakePhoto').addEventListener('click', () => {
-        if(fileInput) fileInput.value = '';
-        rawPhotoFile = null;
-        $('#photoPreviewZone').style.display = 'none';
-        dropZone.style.display = 'block';
-      });
-    }
-
-    if($('#formLapangan')){
-      $('#formLapangan').addEventListener('submit', handleFormSubmit);
-    }
-  }
-
-  async function uploadToStorage(blobOrFile, path){
-    const { data, error } = await sb.storage.from(STORAGE_BUCKET).upload(path, blobOrFile, {
-      upsert: true,
-      contentType: 'image/jpeg'
-    });
-    if(error) throw error;
-    const { data: pubData } = sb.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-    return pubData.publicUrl;
-  }
-
-  function canvasToBlob(canvas){
-    return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
-  }
-
-  /* Form Submit Handler */
-  async function handleFormSubmit(e){
-    e.preventDefault();
-
-    if(!rawPhotoFile){
-      toast('Ambil atau pilih foto stand meter terlebih dahulu!');
-      return;
-    }
-    if(!sigDrawn.perwakilan){
-      toast('Tanda tangan perwakilan wajib diisi!');
-      return;
-    }
-
-    const btnSubmit = $('#btnSubmit');
-    btnSubmit.disabled = true;
-    btnSubmit.textContent = 'Mengirim Data…';
-
-    try {
-      const now = new Date();
-      const dateStr = todayISO(now);
-      const timeStr = now.toTimeString().slice(0, 5);
-      const industriSlug = slugify($('#fNamaIndustri').value);
-      const timestamp = now.getTime();
-
-      const photoPath = `meter/${dateStr}_${industriSlug}_${timestamp}.jpg`;
-      const photoUrl = await uploadToStorage(rawPhotoFile, photoPath);
-
-      let sigPencatatUrl = null;
-      if(sigDrawn.pencatat){
-        const blob = await canvasToBlob(sigPads.pencatat.canvas);
-        sigPencatatUrl = await uploadToStorage(blob, `signatures/${dateStr}_${industriSlug}_pencatat_${timestamp}.jpg`);
-      }
-
-      const blobPerwakilan = await canvasToBlob(sigPads.perwakilan.canvas);
-      const sigPerwakilanUrl = await uploadToStorage(blobPerwakilan, `signatures/${dateStr}_${industriSlug}_perwakilan_${timestamp}.jpg`);
-
-      const payload = {
-        nama_industri: $('#fNamaIndustri').value,
-        no_pelanggan: $('#fNoPelanggan').value || null,
-        stand_meter: parseFloat($('#fStandMeter').value) || 0,
-        nama_pencatat: $('#fNamaPencatat').value,
-        nama_perwakilan: $('#fNamaPerwakilan').value,
-        catatan_lapangan: $('#fCatatan').value || null,
-        foto_url: photoUrl,
-        sig_pencatat_url: sigPencatatUrl,
-        sig_perwakilan_url: sigPerwakilanUrl,
-        tanggal: dateStr,
-        jam: timeStr,
-        status: 'pending'
-      };
-
-      const { error: dbError } = await sb.from('dpm').insert([payload]);
-      if(dbError) throw dbError;
-
-      toast('Data DPM Digital berhasil dikirim!');
-      $('#formLapangan').reset();
-      if($('#btnRetakePhoto')) $('#btnRetakePhoto').click();       $$('[data-clear]').forEach(b => b.click());
-
-    } catch(err) {
-      console.error(err);
-      toast('Gagal mengirim: ' + (err.message || 'Periksa koneksi/RLS Supabase'));
-    } finally {
-      btnSubmit.disabled = false;
-      btnSubmit.textContent = 'Kirim DPM Digital';
-    }
-  }
-
-  // Menjalankan saat DOM Siap
+  // Jalankan saat halaman selesai dimuat
   document.addEventListener('DOMContentLoaded', () => {
-    setupTabs();
-    initCapabilities();
-    setupSignaturePads();
-    setupFormHandlers();
+    initSupabase();
   });
-
-})();
 </script>
 </body>
 </html>
