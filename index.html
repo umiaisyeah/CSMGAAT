@@ -1,860 +1,16 @@
-<!doctype html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>DPM Digital — Pencatatan Meter Industri</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<style>
-  :root {
-    /* Main Theme Palette: Blue & Orange */
-    --brand-blue: #0F3854;
-    --brand-blue-hover: #0A263B;
-    --brand-blue-light: #F0F5F9;
-    
-    --brand-orange: #FF6B00;
-    --brand-orange-hover: #E05E00;
-    --brand-orange-light: #FFF4EC;
-    
-    --ink: #1E293B;
-    --ink-muted: #64748B;
-    --paper: #F8FAFC;
-    --surface: #FFFFFF;
-    
-    /* Semantic Colors */
-    --verified: #10B981;
-    --verified-tint: #ECFDF5;
-    --mismatch: #EF4444;
-    --mismatch-tint: #FEF2F2;
-    --pending: #F59E0B;
-    --pending-tint: #FFFBEB;
-    
-    --line: #E2E8F0;
-    --line-soft: #F1F5F9;
-    
-    --shadow-sm: 0 1px 3px rgba(15, 56, 84, 0.05);
-    --shadow-md: 0 4px 12px rgba(15, 56, 84, 0.08);
-    --shadow-lg: 0 12px 28px rgba(15, 56, 84, 0.12);
-    
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 16px;
-    
-    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --ink: #F1F5F9;
-      --ink-muted: #94A3B8;
-      --paper: #0B132B;
-      --surface: #1C2541;
-      
-      --brand-blue-light: #1C2B42;
-      --brand-orange-light: #32211A;
-      
-      --line: #2A3859;
-      --line-soft: #1E2942;
-      
-      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
-      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
-      --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.4);
-    }
-  }
-
-  :root[data-theme="dark"] {
-    --ink: #F1F5F9;
-    --ink-muted: #94A3B8;
-    --paper: #0B132B;
-    --surface: #1C2541;
-    
-    --brand-blue-light: #1C2B42;
-    --brand-orange-light: #32211A;
-    
-    --line: #2A3859;
-    --line-soft: #1E2942;
-    
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.4);
-  }
-
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
-  body {
-    background: var(--paper);
-    color: var(--ink);
-    font-family: var(--font-sans);
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  button { font-family: inherit; }
-  input, select, textarea { font-family: inherit; color: inherit; }
-  a { color: var(--brand-orange); }
-
-  .wrap { max-width: 900px; margin: 0 auto; padding: 0 16px 64px; }
-
-  /* Header Section */
-  header.app {
-    background: var(--surface);
-    border-bottom: 1px solid var(--line);
-    box-shadow: var(--shadow-sm);
-    position: sticky;
-    top: 0;
-    z-index: 40;
-  }
-  .app-inner {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 20px 16px 0;
-  }
-  .header-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-  }
-  .brand { display: flex; align-items: center; gap: 8px; }
-  .brand-badge {
-    background: var(--brand-orange);
-    color: #FFFFFF;
-    font-family: var(--font-mono);
-    font-weight: 700;
-    font-size: 11px;
-    padding: 3px 8px;
-    border-radius: 6px;
-    letter-spacing: 0.05em;
-  }
-  .brand-title {
-    font-weight: 800;
-    font-size: 20px;
-    color: var(--brand-blue);
-    margin: 0;
-    letter-spacing: -0.02em;
-  }
-  :root[data-theme="dark"] .brand-title { color: #FFFFFF; }
-  
-  .conn-status {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--ink-muted);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--line-soft);
-    padding: 4px 10px;
-    border-radius: 20px;
-  }
-  .conn-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--pending);
-  }
-  .conn-dot.ok { background: var(--verified); }
-  .conn-dot.off { background: var(--mismatch); }
-
-  .tagline {
-    color: var(--ink-muted);
-    font-size: 13.5px;
-    margin: 0 0 16px;
-    line-height: 1.4;
-  }
-
-  /* Navigation Tabs */
-  nav.tabs {
-    display: flex;
-    gap: 8px;
-    border-bottom: 1px solid var(--line);
-  }
-  .tab-btn {
-    border: none;
-    background: none;
-    font-weight: 600;
-    font-size: 14px;
-    color: var(--ink-muted);
-    padding: 12px 16px;
-    cursor: pointer;
-    position: relative;
-    transition: color 0.2s ease;
-  }
-  .tab-btn:hover { color: var(--brand-blue); }
-  .tab-btn.active {
-    color: var(--brand-orange);
-  }
-  .tab-btn.active::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: var(--brand-orange);
-    border-radius: 3px 3px 0 0;
-  }
-
-  main { padding-top: 24px; }
-  .view { display: none; }
-  .view.active { display: block; }
-
-  /* Card Component */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-md);
-    overflow: hidden;
-  }
-  .step { padding: 24px; }
-  .step + .step { border-top: 1px solid var(--line-soft); }
-  .step-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-  .step-num {
-    font-family: var(--font-mono);
-    font-weight: 700;
-    font-size: 13px;
-    background: var(--brand-blue-light);
-    color: var(--brand-blue);
-    border-radius: 50%;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-  :root[data-theme="dark"] .step-num {
-    color: var(--brand-orange);
-    background: var(--brand-orange-light);
-  }
-  .step-title { font-weight: 700; font-size: 16px; color: var(--ink); }
-  .step-hint { color: var(--ink-muted); font-size: 13px; margin: 4px 0 0 40px; }
-
-  /* Form Elements */
-  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-left: 40px; }
-  @media (max-width: 640px) { .field-grid { grid-template-columns: 1fr; margin-left: 0; } .step-hint { margin-left: 0; } }
-  
-  .field { margin-left: 40px; margin-bottom: 16px; }
-  @media (max-width: 640px) { .field { margin-left: 0; } }
-  .field:last-child { margin-bottom: 0; }
-  
-  .field label { display: block; font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
-  .field label .req { color: var(--brand-orange); }
-  
-  .field input[type=text], .field input[type=number], .field textarea {
-    width: 100%;
-    border: 1.5px solid var(--line);
-    border-radius: var(--radius-sm);
-    background: var(--paper);
-    padding: 12px 14px;
-    font-size: 14.5px;
-    color: var(--ink);
-    transition: all 0.15s ease;
-  }
-  .field input:focus, .field textarea:focus {
-    outline: none;
-    border-color: var(--brand-orange);
-    background: var(--surface);
-    box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.15);
-  }
-  .field textarea { resize: vertical; min-height: 80px; }
-  
-  .unit-input { display: flex; align-items: stretch; }
-  .unit-input input { border-radius: var(--radius-sm) 0 0 var(--radius-sm); font-family: var(--font-mono); font-weight: 600; }
-  .unit-input span {
-    border: 1.5px solid var(--line);
-    border-left: none;
-    background: var(--line-soft);
-    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-    padding: 0 16px;
-    display: flex;
-    align-items: center;
-    font-family: var(--font-mono);
-    font-weight: 600;
-    font-size: 14px;
-    color: var(--ink-muted);
-  }
-
-  /* Photo Section */
-  .photo-zone { margin-left: 40px; }
-  @media (max-width: 640px) { .photo-zone { margin-left: 0; } }
-  
-  .photo-drop {
-    border: 2px dashed var(--line);
-    border-radius: var(--radius-md);
-    padding: 28px;
-    text-align: center;
-    cursor: pointer;
-    background: var(--paper);
-    transition: all 0.2s ease;
-  }
-  .photo-drop:hover { border-color: var(--brand-orange); background: var(--brand-orange-light); }
-  .photo-drop svg { color: var(--brand-orange); margin-bottom: 8px; }
-  .photo-drop p { margin: 0; font-size: 14px; font-weight: 600; color: var(--ink); }
-  .photo-drop span { font-size: 12px; color: var(--ink-muted); display: block; margin-top: 4px; }
-  
-  .photo-preview { position: relative; display: inline-block; width: 100%; }
-  .photo-preview img {
-    width: 100%;
-    max-height: 360px;
-    object-fit: cover;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--line);
-    display: block;
-  }
-  .photo-actions { margin-top: 10px; display: flex; gap: 8px; align-items: center; }
-  .photo-filename {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--ink-muted);
-    background: var(--line-soft);
-    border-radius: 6px;
-    padding: 4px 10px;
-    display: inline-block;
-  }
-
-  /* Signatures */
-  .sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-left: 40px; }
-  @media (max-width: 640px) { .sig-grid { grid-template-columns: 1fr; margin-left: 0; } }
-  
-  .sig-block label { display: block; font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
-  .sig-block input[type=text] {
-    width: 100%;
-    border: 1.5px solid var(--line);
-    border-radius: var(--radius-sm);
-    background: var(--paper);
-    padding: 10px 12px;
-    font-size: 13.5px;
-    margin-bottom: 10px;
-  }
-  .sig-pad-wrap {
-    border: 1.5px solid var(--line);
-    border-radius: var(--radius-sm);
-    background: #FFFFFF;
-    position: relative;
-    touch-action: none;
-    overflow: hidden;
-  }
-  .sig-pad-wrap canvas { display: block; width: 100%; height: 140px; cursor: crosshair; }
-  .sig-baseline { position: absolute; left: 16px; right: 16px; bottom: 30px; border-bottom: 1px dashed var(--line); pointer-events: none; }
-  .sig-empty-hint { position: absolute; top: 45%; left: 0; right: 0; text-align: center; color: #94A3B8; font-size: 13px; pointer-events: none; }
-  .sig-foot { display: flex; justify-content: flex-end; margin-top: 6px; }
-  .sig-clear {
-    background: none;
-    border: none;
-    color: var(--brand-orange);
-    font-size: 12.5px;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 2px 4px;
-  }
-  .sig-clear:hover { text-decoration: underline; }
-
-  /* Buttons & Action Bar */
-  .submit-bar {
-    padding: 20px 24px;
-    background: var(--brand-blue-light);
-    border-top: 1px solid var(--line);
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-  
-  .btn {
-    appearance: none;
-    border: none;
-    background: var(--brand-orange);
-    color: #FFFFFF;
-    font-weight: 700;
-    font-size: 15px;
-    border-radius: var(--radius-sm);
-    padding: 12px 24px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(255, 107, 0, 0.25);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-  .btn:hover { background: var(--brand-orange-hover); transform: translateY(-1px); }
-  .btn:active { transform: translateY(0); }
-  .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
-  
-  .btn.navy { background: var(--brand-blue); box-shadow: 0 2px 8px rgba(15, 56, 84, 0.2); }
-  .btn.navy:hover { background: var(--brand-blue-hover); }
-  
-  .btn.secondary {
-    background: transparent;
-    border: 1.5px solid var(--line);
-    color: var(--ink);
-    box-shadow: none;
-  }
-  .btn.secondary:hover { background: var(--line-soft); border-color: var(--line); }
-  
-  .btn.danger { background: var(--mismatch); box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25); }
-  .btn.danger:hover { background: #DC2626; }
-  .btn.small { padding: 8px 14px; font-size: 13px; }
-
-  .submit-hint { color: var(--ink-muted); font-size: 13px; }
-
-  /* Dashboard Stats */
-  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
-  @media (max-width: 640px) { .stat-row { grid-template-columns: 1fr 1fr; } }
-  
-  .stat {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-md);
-    padding: 16px;
-    box-shadow: var(--shadow-sm);
-  }
-  .stat .n { font-family: var(--font-mono); font-size: 26px; font-weight: 700; display: block; color: var(--brand-blue); }
-  :root[data-theme="dark"] .stat .n { color: #FFFFFF; }
-  .stat .l { font-size: 12.5px; font-weight: 600; color: var(--ink-muted); }
-  .stat.pending .n { color: var(--pending); }
-  .stat.sesuai .n { color: var(--verified); }
-  .stat.tidak .n { color: var(--mismatch); }
-
-  /* Dashboard Toolbar */
-  .toolbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
-  .filter-pills { display: flex; gap: 6px; flex-wrap: wrap; }
-  
-  .pill {
-    border: 1px solid var(--line);
-    background: var(--surface);
-    border-radius: 20px;
-    padding: 6px 14px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    color: var(--ink-muted);
-    transition: all 0.15s ease;
-  }
-  .pill:hover { border-color: var(--brand-orange); color: var(--brand-orange); }
-  .pill.active { background: var(--brand-orange); border-color: var(--brand-orange); color: #FFFFFF; }
-  
-  .search-input {
-    margin-left: auto;
-    border: 1.5px solid var(--line);
-    border-radius: 20px;
-    padding: 8px 16px;
-    font-size: 13.5px;
-    background: var(--surface);
-    min-width: 200px;
-  }
-  @media (max-width: 640px) { .search-input { margin-left: 0; width: 100%; } }
-  
-  .date-input {
-    border: 1.5px solid var(--line);
-    border-radius: 20px;
-    padding: 7px 14px;
-    font-size: 13px;
-    background: var(--surface);
-    font-family: var(--font-mono);
-  }
-
-  /* List & Cards */
-  .list { display: flex; flex-direction: column; gap: 10px; }
-  .row-card {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-md);
-    padding: 16px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    cursor: pointer;
-    box-shadow: var(--shadow-sm);
-    transition: all 0.15s ease;
-  }
-  .row-card:hover { border-color: var(--brand-orange); transform: translateY(-1px); box-shadow: var(--shadow-md); }
-  
-  .row-thumb {
-    width: 56px;
-    height: 56px;
-    border-radius: var(--radius-sm);
-    object-fit: cover;
-    flex-shrink: 0;
-    background: var(--line-soft);
-    border: 1px solid var(--line);
-  }
-  .row-main { flex: 1; min-width: 0; }
-  .row-title { font-weight: 700; font-size: 15px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .row-sub { font-size: 13px; color: var(--ink-muted); margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap; }
-  .row-meter { font-family: var(--font-mono); font-weight: 700; font-size: 16px; color: var(--brand-blue); white-space: nowrap; }
-  :root[data-theme="dark"] .row-meter { color: var(--brand-orange); }
-
-  /* Chips */
-  .chip {
-    font-size: 11.5px;
-    font-weight: 700;
-    border-radius: 20px;
-    padding: 4px 12px;
-    white-space: nowrap;
-    letter-spacing: 0.02em;
-    display: inline-block;
-  }
-  .chip.pending { background: var(--pending-tint); color: var(--pending); }
-  .chip.sesuai { background: var(--verified-tint); color: var(--verified); }
-  .chip.tidak_sesuai { background: var(--mismatch-tint); color: var(--mismatch); }
-
-  .empty { text-align: center; padding: 60px 20px; color: var(--ink-muted); }
-  .empty svg { opacity: 0.4; margin-bottom: 12px; color: var(--brand-blue); }
-  .empty p { margin: 0; font-size: 14.5px; }
-
-  /* Modal Sheet */
-  .overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(4px);
-    display: none;
-    align-items: flex-end;
-    justify-content: center;
-    z-index: 50;
-  }
-  .overlay.open { display: flex; }
-  @media (min-width: 720px) { .overlay { align-items: center; } }
-  
-  .sheet {
-    background: var(--surface);
-    width: 100%;
-    max-width: 600px;
-    max-height: 90vh;
-    overflow-y: auto;
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    box-shadow: var(--shadow-lg);
-  }
-  @media (min-width: 720px) { .sheet { border-radius: var(--radius-lg); } }
-  
-  .sheet-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    padding: 20px 24px;
-    border-bottom: 1px solid var(--line-soft);
-    position: sticky;
-    top: 0;
-    background: var(--surface);
-    z-index: 10;
-  }
-  .sheet-head h2 { font-size: 18px; font-weight: 700; margin: 0 0 4px; color: var(--ink); }
-  .sheet-close {
-    background: var(--line-soft);
-    border: none;
-    font-size: 20px;
-    border-radius: 50%;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--ink-muted);
-    cursor: pointer;
-  }
-  
-  .sheet-body { padding: 24px; }
-  .detail-photo {
-    width: 100%;
-    max-height: 320px;
-    object-fit: cover;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--line);
-    display: block;
-    margin-bottom: 20px;
-    cursor: zoom-in;
-  }
-  
-  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-  .detail-item .l { font-size: 12px; font-weight: 600; color: var(--ink-muted); margin-bottom: 2px; }
-  .detail-item .v { font-size: 14.5px; font-weight: 600; color: var(--ink); }
-  .detail-item.meter .v { font-family: var(--font-mono); font-size: 22px; font-weight: 700; color: var(--brand-orange); }
-  
-  .detail-sigs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-  .detail-sig-card { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px; text-align: center; background: var(--paper); }
-  .detail-sig-card img { width: 100%; height: 80px; object-fit: contain; background: #FFFFFF; border-radius: 4px; }
-  .detail-sig-card .who { font-size: 12px; font-weight: 600; color: var(--ink-muted); margin-top: 6px; }
-  
-  .verify-box { border-top: 1px solid var(--line-soft); padding-top: 20px; margin-top: 10px; }
-  .verify-box label { display: block; font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
-  .verify-box input[type=text], .verify-box textarea {
-    width: 100%;
-    border: 1.5px solid var(--line);
-    border-radius: var(--radius-sm);
-    background: var(--paper);
-    padding: 10px 12px;
-    font-size: 14px;
-    margin-bottom: 12px;
-  }
-  .verify-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-  .status-note { margin-top: 12px; font-size: 13px; color: var(--ink-muted); }
-
-  /* Lightbox & Toast */
-  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 60; padding: 20px; }
-  .lightbox.open { display: flex; }
-  .lightbox img { max-width: 100%; max-height: 100%; border-radius: var(--radius-sm); }
-
-  .toast {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%) translateY(20px);
-    background: var(--brand-blue);
-    color: #FFFFFF;
-    padding: 12px 24px;
-    border-radius: 30px;
-    font-size: 14px;
-    font-weight: 600;
-    opacity: 0;
-    pointer-events: none;
-    transition: all 0.25s ease;
-    z-index: 70;
-    box-shadow: var(--shadow-lg);
-  }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-  .footer-note { color: var(--ink-muted); font-size: 12.5px; text-align: center; margin-top: 32px; }
-</style>
-</head>
-<body>
-
-<header class="app">
-  <div class="app-inner">
-    <div class="header-top">
-      <div class="brand">
-        <span class="brand-badge">AETRA · CSM</span>
-        <h1 class="brand-title">DPM Digital</h1>
-      </div>
-      <span class="conn-status">
-        <span class="conn-dot" id="connDot"></span>
-        <span id="connText">Menyambungkan…</span>
-      </span>
-    </div>
-    <p class="tagline">Pencatatan stand meter air industri digital — foto otomatis tersimpan dan terorganisir.</p>
-    <nav class="tabs">
-      <button class="tab-btn active" data-view="lapangan" type="button">Input Lapangan</button>
-      <button class="tab-btn" data-view="kantor" type="button">Dashboard Kantor</button>
-    </nav>
-  </div>
-</header>
-
-<main class="wrap">
-
-  <!-- ========================= VIEW: LAPANGAN ========================= -->
-  <section class="view active" id="view-lapangan">
-    <form class="card" id="formLapangan" autocomplete="off">
-
-      <div class="step">
-        <div class="step-head">
-          <span class="step-num">1</span>
-          <span class="step-title">Data Industri &amp; Stand Meter</span>
-        </div>
-        <p class="step-hint">Diisi langsung di lokasi industri untuk menggantikan formulir kertas.</p>
-
-        <div class="field-grid">
-          <div class="field">
-            <label for="fNamaIndustri">Nama Industri <span class="req">*</span></label>
-            <input type="text" id="fNamaIndustri" placeholder="cth. PT Sumber Makmur Textile" required>
-          </div>
-          <div class="field">
-            <label for="fNoPelanggan">No. Pelanggan <span style="color:var(--ink-muted)">(Opsional)</span></label>
-            <input type="text" id="fNoPelanggan" placeholder="cth. IND-00214">
-          </div>
-        </div>
-
-        <div class="field">
-          <label for="fAlamat">Alamat / Lokasi Titik Meter <span style="color:var(--ink-muted)">(Opsional)</span></label>
-          <input type="text" id="fAlamat" placeholder="cth. Jl. Industri Raya No. 12, Bojong">
-        </div>
-
-        <div class="field-grid">
-          <div class="field">
-            <label for="fStandMeter">Stand Meter <span class="req">*</span></label>
-            <div class="unit-input">
-              <input type="number" id="fStandMeter" placeholder="0" inputmode="decimal" step="any" required>
-              <span>m³</span>
-            </div>
-          </div>
-          <div class="field">
-            <label for="fNamaPencatat">Nama Pencatat Meter <span class="req">*</span></label>
-            <input type="text" id="fNamaPencatat" placeholder="Nama petugas pencatat" required>
-          </div>
-        </div>
-
-        <div class="field">
-          <label for="fCatatan">Catatan Lapangan <span style="color:var(--ink-muted)">(Opsional)</span></label>
-          <textarea id="fCatatan" placeholder="Tulis kendala akses, kondisi meter, atau info tambahan…"></textarea>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-head">
-          <span class="step-num">2</span>
-          <span class="step-title">Foto Stand Meter</span>
-        </div>
-        <p class="step-hint">Nama berkas foto otomatis disesuaikan secara terstruktur.</p>
-
-        <div class="photo-zone">
-          <div id="photoDropZone" class="photo-drop">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-              <circle cx="12" cy="13" r="4"/>
-            </svg>
-            <p>Ketuk untuk memotret / pilih foto meter</p>
-            <span>Format yang didukung: JPG, PNG</span>
-          </div>
-          <div id="photoPreviewZone" style="display:none">
-            <div class="photo-preview">
-              <img id="photoPreviewImg" alt="Pratinjau foto stand meter">
-            </div>
-            <div class="photo-actions">
-              <button type="button" class="btn secondary small" id="btnRetakePhoto">Ambil Ulang Foto</button>
-            </div>
-            <span class="photo-filename" id="photoFilenameLabel"></span>
-          </div>
-          <input type="file" accept="image/*" capture="environment" id="fotoInput" hidden>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-head">
-          <span class="step-num">3</span>
-          <span class="step-title">Tanda Tangan Digital</span>
-        </div>
-        <p class="step-hint">Pengesahan oleh kedua belah pihak secara langsung di layar.</p>
-
-        <div class="sig-grid">
-          <div class="sig-block">
-            <label for="fNamaPencatat2">Pencatat Meter</label>
-            <input type="text" id="fNamaPencatat2" placeholder="Nama pencatat" disabled>
-            <div class="sig-pad-wrap" data-sig="pencatat">
-              <canvas></canvas>
-              <div class="sig-baseline"></div>
-              <div class="sig-empty-hint">Tanda tangan di sini</div>
-            </div>
-            <div class="sig-foot">
-              <button type="button" class="sig-clear" data-clear="pencatat">Kosongkan</button>
-            </div>
-          </div>
-          <div class="sig-block">
-            <label for="fNamaPerwakilan">Perwakilan Industri <span class="req">*</span></label>
-            <input type="text" id="fNamaPerwakilan" placeholder="Nama &amp; jabatan" required>
-            <div class="sig-pad-wrap" data-sig="perwakilan">
-              <canvas></canvas>
-              <div class="sig-baseline"></div>
-              <div class="sig-empty-hint">Tanda tangan di sini</div>
-            </div>
-            <div class="sig-foot">
-              <button type="button" class="sig-clear" data-clear="perwakilan">Kosongkan</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="submit-bar">
-        <button type="submit" class="btn" id="btnSubmit">Kirim DPM Digital</button>
-        <span class="submit-hint" id="submitHint">Tersimpan dan terkirim otomatis ke sistem kantor.</span>
-      </div>
-    </form>
-  </section>
-
-  <!-- ========================= VIEW: KANTOR ========================= -->
-  <section class="view" id="view-kantor">
-
-    <div class="stat-row">
-      <div class="stat"><span class="n" id="statTotal">0</span><span class="l">Total (Hari Ini)</span></div>
-      <div class="stat pending"><span class="n" id="statPending">0</span><span class="l">Menunggu Crosscheck</span></div>
-      <div class="stat sesuai"><span class="n" id="statSesuai">0</span><span class="l">Sesuai</span></div>
-      <div class="stat tidak"><span class="n" id="statTidak">0</span><span class="l">Tidak Sesuai</span></div>
-    </div>
-
-    <div class="toolbar">
-      <div class="filter-pills" id="filterPills">
-        <button class="pill active" data-filter="all" type="button">Semua</button>
-        <button class="pill" data-filter="pending" type="button">Menunggu</button>
-        <button class="pill" data-filter="sesuai" type="button">Sesuai</button>
-        <button class="pill" data-filter="tidak_sesuai" type="button">Tidak Sesuai</button>
-      </div>
-      <input type="date" class="date-input" id="dateFilter">
-      <input type="text" class="search-input" id="searchInput" placeholder="Cari nama industri…">
-    </div>
-
-    <div class="list" id="kantorList"></div>
-    <div class="empty" id="kantorEmpty" style="display:none">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M9 12h6M9 16h6M9 8h6M5 4h14v16H5z"/>
-      </svg>
-      <p>Belum ada data DPM yang sesuai dengan filter.</p>
-    </div>
-  </section>
-
-  <p class="footer-note">DPM Digital · PT Aetra Air Tangerang — Customer Service Management</p>
-</main>
-
-<!-- Detail Sheet Modal -->
-<div class="overlay" id="detailOverlay">
-  <div class="sheet">
-    <div class="sheet-head">
-      <div>
-        <h2 id="dTitle">—</h2>
-        <div class="current-status" id="dStatusChipWrap"></div>
-      </div>
-      <button class="sheet-close" id="dClose" type="button" aria-label="Tutup">&times;</button>
-    </div>
-    <div class="sheet-body">
-      <img id="dPhoto" class="detail-photo" alt="Foto stand meter">
-      <div class="detail-grid">
-        <div class="detail-item meter"><div class="l">Stand Meter</div><div class="v" id="dMeter">—</div></div>
-        <div class="detail-item"><div class="l">Tanggal &amp; Waktu</div><div class="v" id="dWaktu">—</div></div>
-        <div class="detail-item"><div class="l">No. Pelanggan</div><div class="v" id="dNoPelanggan">—</div></div>
-        <div class="detail-item"><div class="l">Lokasi</div><div class="v" id="dAlamat">—</div></div>
-        <div class="detail-item"><div class="l">Pencatat Meter</div><div class="v" id="dPencatat">—</div></div>
-        <div class="detail-item"><div class="l">Perwakilan Industri</div><div class="v" id="dPerwakilan">—</div></div>
-      </div>
-      <div id="dCatatanWrap" style="display:none;margin-bottom:16px">
-        <div class="detail-item"><div class="l">Catatan Lapangan</div><div class="v" id="dCatatan">—</div></div>
-      </div>
-      <div class="detail-sigs">
-        <div class="detail-sig-card"><img id="dSigPencatat" alt="Tanda tangan pencatat"><div class="who">Pencatat Meter</div></div>
-        <div class="detail-sig-card"><img id="dSigPerwakilan" alt="Tanda tangan perwakilan"><div class="who">Perwakilan Industri</div></div>
-      </div>
-
-      <div class="verify-box">
-        <label for="dVerifNama">Nama Verifikator (Kantor)</label>
-        <input type="text" id="dVerifNama" placeholder="cth. Solihin">
-        <label for="dVerifCatatan">Catatan Crosscheck <span style="color:var(--ink-muted)">(Wajib bila tidak sesuai)</span></label>
-        <textarea id="dVerifCatatan" placeholder="Tulis alasan jika data &amp; foto tidak sesuai…"></textarea>
-        <div class="verify-actions">
-          <button class="btn navy small" id="btnMarkSesuai" type="button">Tandai Sesuai</button>
-          <button class="btn danger small" id="btnMarkTidak" type="button">Tandai Tidak Sesuai</button>
-          <button class="btn secondary small" id="btnMarkPending" type="button">Kembalikan ke Menunggu</button>
-        </div>
-        <p class="status-note" id="dVerifiedNote"></p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="lightbox" id="lightbox"><img id="lightboxImg" alt="Tampilan penuh foto meter"></div>
-<div class="toast" id="toast"></div>
-
 <script>
 (function(){
   "use strict";
 
-  const $ = (sel, el) => (el||document).querySelector(sel);
-  const $$ = (sel, el) => Array.from((el||document).querySelectorAll(sel));
+  const $ = (sel, el) => (el \vert{}\vert{} document).querySelector(sel);   const $$ = (sel, el) => Array.from((el || document).querySelectorAll(sel));
 
-  let toastTimer=null;
+  let toastTimer = null;
   function toast(msg){
-    const t=$('#toast'); t.textContent=msg; t.classList.add('show');
-    clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
   }
 
   function describeError(err){
@@ -869,15 +25,17 @@
   }
 
   function slugify(s){
-    return (s||'').toString().trim().toLowerCase()
-      .replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'industri';
+    return (s || '').toString().trim().toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'industri';
   }
-  function todayISO(d){ d=d||new Date(); return d.toISOString().slice(0,10); }
+
+  function todayISO(d){ d = d || new Date(); return d.toISOString().slice(0, 10); }
+
   function fmtTanggal(iso, jam){
     if(!iso) return '—';
-    const [y,m,d]=iso.split('-');
-    const bulan=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-    return `${parseInt(d,10)} ${bulan[parseInt(m,10)-1]} ${y}` + (jam? ' · '+jam:'');
+    const [y, m, d] = iso.split('-');
+    const bulan = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    return `${parseInt(d, 10)} ${bulan[parseInt(m, 10) - 1]} ${y}` + (jam ? ' · ' + jam : '');
   }
 
   /* Configuration */
@@ -885,314 +43,280 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdqZmt1bGhhdnpwZmZucHZmbWVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3ODc5NjQsImV4cCI6MjEwNTM2Mzk2NH0.jfVgsZSy6Kk2NPkBvIOttLee-cIKd8yem9PxqpxyT_o';
   const STORAGE_BUCKET = 'dpm-files';
 
-  let sb=null, capReady=false;
+  let sb = null, capReady = false;
+  let activeTab = 'lapangan';
+  let currentFilter = 'all';
+  let selectedRecord = null;
+  let rawPhotoFile = null;
+
+  // Signatures canvas state
+  const sigPads = { pencatat: null, perwakilan: null };
+  const sigDrawn = { pencatat: false, perwakilan: false };
 
   async function initCapabilities(){
-    try{
-      if(SUPABASE_URL.startsWith('GANTI_') || SUPABASE_ANON_KEY.startsWith('GANTI_')){
-        setConn('off','Belum dikonfigurasi');
-        return;
-      }
-      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      const { error } = await sb.from('dpm').select('id', { count:'exact', head:true });
-      if(error) throw error;
-      capReady=true;
-      setConn('ok','Tersambung ke Supabase');
-      subscribeList();
-    }catch(e){
-      console.error('Supabase init error:', e);
-      setConn('off','Koneksi Gagal: '+describeError(e));
+    try {
+      if (typeof supabase === 'undefined') throw new Error("Library Supabase belum dimuat.");
+      sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      
+      // Tes Koneksi
+      const { data, error } = await sb.from('dpm').select('id').limit(1);
+      if(error && !error.message.includes('0 rows')) throw error;
+
+      $('#connDot').className = 'conn-dot ok';
+      $('#connText').textContent = 'Terhubung';
+      capReady = true;
+      loadKantorData();
+    } catch(err) {
+      $('#connDot').className = 'conn-dot off';
+      $('#connText').textContent = 'Offline / Error';
+      console.error("Inisialisasi Supabase Gagal:", err);
     }
   }
 
-  function setConn(state,text){
-    $('#connDot').className='conn-dot'+(state==='ok'?' ok':state==='off'?' off':'');
-    $('#connText').textContent=text;   }    function shortId(){     return (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(16).slice(2)).slice(0,8);   }   async function uploadFile(path, blob, contentType){     const { error } = await sb.storage.from(STORAGE_BUCKET).upload(path, blob, { contentType, upsert:false });     if(error) throw error;     const { data } = sb.storage.from(STORAGE_BUCKET).getPublicUrl(path);     return data.publicUrl;   }   function dataURLtoBlob(dataUrl){     return fetch(dataUrl).then(r=>r.blob());   }    /* Tabs Switch */   $$('.tab-btn').forEach(btn=>{     btn.addEventListener('click', ()=>{       $$('.tab-btn').forEach(b=>b.classList.remove('active'));       btn.classList.add('active');       $$('.view').forEach(v=>v.classList.remove('active'));$('#view-'+btn.dataset.view).classList.add('active');
+  /* Canvas Signature Handlers */
+  function setupSignaturePads(){
+    $$('.sig-pad-wrap').forEach(wrap => {       const type = wrap.dataset.sig;       const canvas = wrap.querySelector('canvas');       const ctx = canvas.getContext('2d');        function resize(){         const rect = wrap.getBoundingClientRect();         canvas.width = rect.width;         canvas.height = 140;         ctx.lineWidth = 2.5;         ctx.lineCap = 'round';         ctx.strokeStyle = '#0F3854';       }       resize();       window.addEventListener('resize', resize);        let drawing = false;       function getPos(e){         const rect = canvas.getBoundingClientRect();         const clientX = e.touches ? e.touches[0].clientX : e.clientX;         const clientY = e.touches ? e.touches[0].clientY : e.clientY;         return { x: clientX - rect.left, y: clientY - rect.top };       }        function start(e){         drawing = true;         const pos = getPos(e);         ctx.beginPath();         ctx.moveTo(pos.x, pos.y);         wrap.querySelector('.sig-empty-hint').style.display = 'none';         sigDrawn[type] = true;       }        function move(e){         if(!drawing) return;         const pos = getPos(e);         ctx.lineTo(pos.x, pos.y);         ctx.stroke();       }        function stop(){ drawing = false; }        canvas.addEventListener('mousedown', start);       canvas.addEventListener('mousemove', move);       window.addEventListener('mouseup', stop);        canvas.addEventListener('touchstart', (e) => { start(e); e.preventDefault(); }, {passive: false});       canvas.addEventListener('touchmove', (e) => { move(e); e.preventDefault(); }, {passive: false});       canvas.addEventListener('touchend', stop);        sigPads[type] = { canvas, ctx, wrap };     });      $$
+('[data-clear]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const type = btn.dataset.clear;
+        const pad = sigPads[type];
+        if(pad){
+          pad.ctx.clearRect(0, 0, pad.canvas.width, pad.canvas.height);
+          pad.wrap.querySelector('.sig-empty-hint').style.display = 'block';
+          sigDrawn[type] = false;
+        }
+      });
     });
-  });
-
-  /* Signature Canvas */
-  const sigPads={};
-  function makeSigPad(wrap){
-    const canvas=$('canvas',wrap);
-    const ctx=canvas.getContext('2d');
-    const hint=$('.sig-empty-hint',wrap);
-    let drawing=false, hasDrawn=false, last=null;
-
-    function resize(){
-      const rect=wrap.getBoundingClientRect();
-      const ratio=window.devicePixelRatio||1;
-      canvas.width=rect.width*ratio;
-      canvas.height=140*ratio;
-      ctx.scale(ratio,ratio);
-      ctx.lineWidth=2.2;
-      ctx.lineCap='round';
-      ctx.lineJoin='round';
-      ctx.strokeStyle='#0F3854';
-    }
-    resize();
-    window.addEventListener('resize', ()=>{ if(!hasDrawn) resize(); });
-
-    function pos(e){
-      const rect=canvas.getBoundingClientRect();
-      const cx=(e.touches? e.touches[0].clientX : e.clientX);
-      const cy=(e.touches? e.touches[0].clientY : e.clientY);
-      return {x:cx-rect.left, y:cy-rect.top};
-    }
-    function start(e){
-      e.preventDefault();
-      drawing=true; hasDrawn=true; hint.style.display='none';
-      last=pos(e);
-    }
-    function move(e){
-      if(!drawing) return;
-      e.preventDefault();
-      const p=pos(e);
-      ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke();
-      last=p;
-    }
-    function end(){ drawing=false; }
-
-    canvas.addEventListener('pointerdown', start);
-    canvas.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', end);
-
-    function clear(){
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      hasDrawn=false; hint.style.display='block';
-    }
-    function toDataURL(){
-      return hasDrawn ? canvas.toDataURL('image/png') : null;
-    }
-    return {clear, toDataURL, get hasDrawn(){return hasDrawn;}};
   }
-  $$('.sig-pad-wrap').forEach(wrap=>{     sigPads[wrap.dataset.sig]=makeSigPad(wrap);   });$$
-('.sig-clear').forEach(btn=>{
-    btn.addEventListener('click', ()=> sigPads[btn.dataset.clear].clear());
-  });
 
-  $('#fNamaPencatat').addEventListener('input', e=>{
-    $('#fNamaPencatat2').value = e.target.value;
-  });
+  /* Input Syncing & Photo Management */
+  function setupFormHandlers(){
+    $('#fNamaPencatat').addEventListener('input', (e) => {
+      $('#fNamaPencatat2').value = e.target.value;
+    });
 
-  /* Photo Upload Handler */
-  let photoFile=null;
-  $('#photoDropZone').addEventListener('click', ()=> $('#fotoInput').click());
-  $('#fotoInput').addEventListener('change', e=>{
-    const f=e.target.files[0];
-    if(!f) return;
-    photoFile=f;
-    const url=URL.createObjectURL(f);
-    $('#photoPreviewImg').src=url;
-    $('#photoDropZone').style.display='none';
-    $('#photoPreviewZone').style.display='block';
-    const industri=$('#fNamaIndustri').value || 'industri';
-    $('#photoFilenameLabel').textContent = `${todayISO()}_${slugify(industri)}.jpg`;
-  });
-  $('#btnRetakePhoto').addEventListener('click', ()=>{
-    photoFile=null;
-    $('#fotoInput').value='';
-    $('#photoDropZone').style.display='block';
-    $('#photoPreviewZone').style.display='none';
-  });
+    const dropZone = $('#photoDropZone');
+    const fileInput = $('#fotoInput');
 
-  /* Form Submission */
-  $('#formLapangan').addEventListener('submit', async e=>{
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      if(e.target.files && e.target.files[0]){
+        handlePhotoSelect(e.target.files[0]);
+      }
+    });
+
+    $('#btnRetakePhoto').addEventListener('click', () => {
+      fileInput.value = '';
+      rawPhotoFile = null;
+      $('#photoPreviewZone').style.display = 'none';
+      dropZone.style.display = 'block';
+    });
+
+    $('#formLapangan').addEventListener('submit', handleFormSubmit);
+  }
+
+  function handlePhotoSelect(file){
+    rawPhotoFile = file;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      $('#photoPreviewImg').src = e.target.result;
+      $('#photoDropZone').style.display = 'none';
+      $('#photoPreviewZone').style.display = 'block';
+      
+      const slug = slugify($('#fNamaIndustri').value || 'meter');
+      const dateStr = todayISO();
+      $('#photoFilenameLabel').textContent = `${slug}_${dateStr}_meter.jpg`;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /* Helper Upload Ke Supabase Storage */
+  async function uploadToStorage(blobOrFile, path){
+    const { data, error } = await sb.storage.from(STORAGE_BUCKET).upload(path, blobOrFile, {
+      upsert: true,
+      contentType: 'image/jpeg'
+    });
+    if(error) throw error;
+    const { data: pubData } = sb.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+    return pubData.publicUrl;
+  }
+
+  function canvasToBlob(canvas){
+    return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+  }
+
+  /* Handle Form Submit */
+  async function handleFormSubmit(e){
     e.preventDefault();
 
-    const namaIndustri = $('#fNamaIndustri').value.trim();
-    const noPelanggan = $('#fNoPelanggan').value.trim();
-    const alamat = $('#fAlamat').value.trim();
-    const standMeter = $('#fStandMeter').value.trim();
-    const namaPencatat = $('#fNamaPencatat').value.trim();
-    const catatan = $('#fCatatan').value.trim();
-    const namaPerwakilan = $('#fNamaPerwakilan').value.trim();
-
-    if(!namaIndustri || !standMeter || !namaPencatat || !namaPerwakilan){
-      toast('Mohon lengkapi semua bidang yang wajib diisi (*)');
+    if(!rawPhotoFile){
+      toast('Ambil atau pilih foto stand meter terlebih dahulu!');
+      return;
+    }
+    if(!sigDrawn.perwakilan){
+      toast('Tanda tangan perwakilan industri wajib diisi!');
       return;
     }
 
-    if(!photoFile){
-      toast('Foto stand meter wajib dilampirkan');
-      return;
-    }
-
-    if(!sigPads.pencatat.hasDrawn || !sigPads.perwakilan.hasDrawn){
-      toast('Tanda tangan pencatat & perwakilan industri wajib diisi');
-      return;
-    }
-
-    if(!capReady){
-      toast('Supabase belum terhubung. Periksa konfigurasi URL & Key.');
-      return;
-    }
-
-    const btn = $('#btnSubmit');
-    btn.disabled = true;
-    btn.textContent = 'Menyimpan & Mengunggah…';
+    const btnSubmit = $('#btnSubmit');
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = 'Mengirim Data…';
 
     try {
       const now = new Date();
-      const tanggal = todayISO(now);
-      const jam = now.toTimeString().slice(0,5);
-      const recordId = shortId();
-      const slug = slugify(namaIndustri);
+      const dateStr = todayISO(now);
+      const timeStr = now.toTimeString().slice(0, 5);
+      const industriSlug = slugify($('#fNamaIndustri').value);
+      const timestamp = now.getTime();
 
-      const photoExt = photoFile.name.split('.').pop() || 'jpg';
-      const photoPath = `foto/${tanggal}_${slug}_${recordId}.${photoExt}`;
-      const photoUrl = await uploadFile(photoPath, photoFile, photoFile.type);
+      // 1. Upload Foto Meter
+      const photoPath = `meter/${dateStr}_${industriSlug}_${timestamp}.jpg`;
+      const photoUrl = await uploadToStorage(rawPhotoFile, photoPath);
 
-      const sigPencatatBlob = await dataURLtoBlob(sigPads.pencatat.toDataURL());
-      const sigPencatatPath = `ttd/ttd_pencatat_${tanggal}_${slug}_${recordId}.png`;
-      const sigPencatatUrl = await uploadFile(sigPencatatPath, sigPencatatBlob, 'image/png');
+      // 2. Upload Tanda Tangan Pencatat
+      let sigPencatatUrl = null;
+      if(sigDrawn.pencatat){
+        const blob = await canvasToBlob(sigPads.pencatat.canvas);
+        sigPencatatUrl = await uploadToStorage(blob, `signatures/${dateStr}_${industriSlug}_pencatat_${timestamp}.jpg`);
+      }
 
-      const sigPerwakilanBlob = await dataURLtoBlob(sigPads.perwakilan.toDataURL());
-      const sigPerwakilanPath = `ttd/ttd_perwakilan_${tanggal}_${slug}_${recordId}.png`;
-      const sigPerwakilanUrl = await uploadFile(sigPerwakilanPath, sigPerwakilanBlob, 'image/png');
+      // 3. Upload Tanda Tangan Perwakilan
+      const blobPerwakilan = await canvasToBlob(sigPads.perwakilan.canvas);
+      const sigPerwakilanUrl = await uploadToStorage(blobPerwakilan, `signatures/${dateStr}_${industriSlug}_perwakilan_${timestamp}.jpg`);
 
+      // 4. Save Record to Database Table "dpm"
       const payload = {
-        nama_industri: namaIndustri,
-        no_pelanggan: noPelanggan,
-        alamat: alamat,
-        stand_meter: parseFloat(standMeter),
-        nama_pencatat: namaPencatat,
-        catatan: catatan,
-        nama_perwakilan: namaPerwakilan,
+        nama_industri: $('#fNamaIndustri').value,
+        no_pelanggan: $('#fNoPelanggan').value || null,
+        alamat: $('#fAlamat').value || null,
+        stand_meter: parseFloat($('#fStandMeter').value) || 0,
+        nama_pencatat: $('#fNamaPencatat').value,
+        nama_perwakilan: $('#fNamaPerwakilan').value,
+        catatan_lapangan: $('#fCatatan').value || null,
         foto_url: photoUrl,
-        ttd_pencatat_url: sigPencatatUrl,
-        ttd_perwakilan_url: sigPerwakilanUrl,
-        status: 'pending',
-        tanggal: tanggal,
-        jam: jam
+        sig_pencatat_url: sigPencatatUrl,
+        sig_perwakilan_url: sigPerwakilanUrl,
+        tanggal: dateStr,
+        jam: timeStr,
+        status: 'pending'
       };
 
-      const { error } = await sb.from('dpm').insert([payload]);
-      if(error) throw error;
+      const { error: dbError } = await sb.from('dpm').insert([payload]);
+      if(dbError) throw dbError;
 
-      toast('Data DPM Digital berhasil dikirim!');
+      toast('Data DPM Digital berhasil disimpan!');
       resetForm();
+      switchTab('kantor');
 
     } catch(err) {
-      console.error('Submit error:', err);
+      console.error(err);
       toast('Gagal mengirim data: ' + describeError(err));
     } finally {
-      btn.disabled = false;
-      btn.textContent = 'Kirim DPM Digital';
+      btnSubmit.disabled = false;
+      btnSubmit.textContent = 'Kirim DPM Digital';
     }
-  });
+  }
 
   function resetForm(){
     $('#formLapangan').reset();
-    photoFile = null;
-    $('#fotoInput').value = '';
-    $('#photoDropZone').style.display = 'block';
-    $('#photoPreviewZone').style.display = 'none';
-    sigPads.pencatat.clear();
-    sigPads.perwakilan.clear();
+    $('#btnRetakePhoto').click();
+    $$('[data-clear]').forEach(b => b.click());   }    /* Navigation Tabs */   function setupTabs(){     $$
+('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.view));
+    });
   }
 
-  /* Office Dashboard */
-  let dpmData = [];
-  let activeFilter = 'all';
-
-  $('#dateFilter').value = todayISO();
-
-  function subscribeList(){
-    fetchList();
-    sb.channel('public:dpm')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'dpm' }, () => {
-        fetchList();
-      })
-      .subscribe();
+  function switchTab(viewName){
+    activeTab = viewName;
+    $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === viewName));$$
+('.view').forEach(v => v.classList.toggle('active', v.id === `view-${viewName}`));
+    if(viewName === 'kantor') loadKantorData();
   }
 
-  async function fetchList(){
+  /* Dashboard Kantor Logic */
+  async function loadKantorData(){
     if(!capReady) return;
-    const selectedDate = $('#dateFilter').value;
+
+    const dateVal = $('#dateFilter').value || todayISO();
+    const searchVal = $('#searchInput').value.trim().toLowerCase();
 
     let query = sb.from('dpm').select('*').order('created_at', { ascending: false });
-    if(selectedDate) {
-      query = query.eq('tanggal', selectedDate);
-    }
+    if(dateVal) query = query.eq('tanggal', dateVal);
 
     const { data, error } = await query;
     if(error){
-      console.error('Fetch error:', error);
+      console.error(error);
       return;
     }
-    dpmData = data || [];
-    renderDashboard();
+
+    let records = data || [];
+
+    // Summary Stats
+    $('#statTotal').textContent = records.length;
+    $('#statPending').textContent = records.filter(r => r.status === 'pending').length;
+    $('#statSesuai').textContent = records.filter(r => r.status === 'sesuai').length;
+    $('#statTidak').textContent = records.filter(r => r.status === 'tidak_sesuai').length;
+
+    // Filters
+    if(currentFilter !== 'all'){
+      records = records.filter(r => r.status === currentFilter);
+    }
+    if(searchVal){
+      records = records.filter(r => (r.nama_industri || '').toLowerCase().includes(searchVal));
+    }
+
+    renderList(records);
   }
 
-  function renderDashboard(){
-    $('#statTotal').textContent = dpmData.length;
-    $('#statPending').textContent = dpmData.filter(d => d.status === 'pending').length;
-    $('#statSesuai').textContent = dpmData.filter(d => d.status === 'sesuai').length;
-    $('#statTidak').textContent = dpmData.filter(d => d.status === 'tidak_sesuai').length;
+  function renderList(list){
+    const container = $('#kantorList');
+    const emptyState = $('#kantorEmpty');
+    container.innerHTML = '';
 
-    const searchTerm = $('#searchInput').value.toLowerCase().trim();
-    const filtered = dpmData.filter(item => {
-      const matchFilter = activeFilter === 'all' || item.status === activeFilter;
-      const matchSearch = item.nama_industri.toLowerCase().includes(searchTerm) ||
-                          (item.no_pelanggan && item.no_pelanggan.toLowerCase().includes(searchTerm));
-      return matchFilter && matchSearch;
-    });
-
-    const listEl = $('#kantorList');
-    const emptyEl = $('#kantorEmpty');
-    listEl.innerHTML = '';
-
-    if(filtered.length === 0){
-      emptyEl.style.display = 'block';
+    if(list.length === 0){
+      emptyState.style.display = 'block';
       return;
     }
-    emptyEl.style.display = 'none';
+    emptyState.style.display = 'none';
 
-    filtered.forEach(item => {
+    list.forEach(item => {
       const card = document.createElement('div');
       card.className = 'row-card';
       
-      let statusLabel = 'Menunggu';
-      let chipClass = 'pending';
-      if(item.status === 'sesuai') { statusLabel = 'Sesuai'; chipClass = 'sesuai'; }
-      else if(item.status === 'tidak_sesuai') { statusLabel = 'Tidak Sesuai'; chipClass = 'tidak_sesuai'; }
+      const chipClass = item.status === 'sesuai' ? 'sesuai' : (item.status === 'tidak_sesuai' ? 'tidak_sesuai' : 'pending');
+      const statusLabel = item.status === 'sesuai' ? 'Sesuai' : (item.status === 'tidak_sesuai' ? 'Tidak Sesuai' : 'Menunggu');
 
       card.innerHTML = `
-        <img src="${item.foto_url}" class="row-thumb" alt="Foto meter" loading="lazy">
+        <img class="row-thumb" src="${item.foto_url || ''}" alt="Thumb" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22/>'">
         <div class="row-main">
           <div class="row-title">${item.nama_industri}</div>
           <div class="row-sub">
-            <span>${item.no_pelanggan || 'No ID: -'}</span>
-            <span>·</span>
-            <span>${item.jam || ''}</span>
+            <span>${fmtTanggal(item.tanggal, item.jam)}</span>
+            <span>•</span>
+            <span>${item.nama_pencatat || 'Pencatat'}</span>
           </div>
         </div>
-        <div class="row-meter">${item.stand_meter} m³</div>
-        <span class="chip ${chipClass}">${statusLabel}</span>
+        <div style="text-align:right">
+          <div class="row-meter">${item.stand_meter} m³</div>
+          <span class="chip ${chipClass}">${statusLabel}</span>
+        </div>
       `;
 
-      card.addEventListener('click', () => openDetail(item));
-      listEl.appendChild(card);
+      card.addEventListener('click', () => openDetailSheet(item));
+      container.appendChild(card);
     });
   }
 
-  $('#filterPills').addEventListener('click', e => {     if(!e.target.classList.contains('pill')) return;     $$('.pill',$('#filterPills')).forEach(p => p.classList.remove('active'));
-    e.target.classList.add('active');
-    activeFilter = e.target.dataset.filter;
-    renderDashboard();
-  });
-
-  $('#searchInput').addEventListener('input', renderDashboard);
-  $('#dateFilter').addEventListener('change', fetchList);
-
-  /* Modal Detail Functions */
-  let selectedItem = null;
-
-  function openDetail(item){
-    selectedItem = item;
+  /* Modal Detail & Crosscheck Sheet */
+  function openDetailSheet(item){
+    selectedRecord = item;
     $('#dTitle').textContent = item.nama_industri;
-    $('#dPhoto').src = item.foto_url;
+    
+    const chipClass = item.status === 'sesuai' ? 'sesuai' : (item.status === 'tidak_sesuai' ? 'tidak_sesuai' : 'pending');
+    const statusLabel = item.status === 'sesuai' ? 'Sesuai' : (item.status === 'tidak_sesuai' ? 'Tidak Sesuai' : 'Menunggu Crosscheck');
+    $('#dStatusChipWrap').innerHTML = `<span class="chip ${chipClass}">${statusLabel}</span>`;
+
+    $('#dPhoto').src = item.foto_url || '';
     $('#dMeter').textContent = `${item.stand_meter} m³`;
     $('#dWaktu').textContent = fmtTanggal(item.tanggal, item.jam);
     $('#dNoPelanggan').textContent = item.no_pelanggan || '—';
@@ -1200,99 +324,88 @@
     $('#dPencatat').textContent = item.nama_pencatat || '—';
     $('#dPerwakilan').textContent = item.nama_perwakilan || '—';
 
-    if(item.catatan){
-      $('#dCatatan').textContent = item.catatan;
+    if(item.catatan_lapangan){
       $('#dCatatanWrap').style.display = 'block';
+      $('#dCatatan').textContent = item.catatan_lapangan;
     } else {
       $('#dCatatanWrap').style.display = 'none';
     }
 
-    $('#dSigPencatat').src = item.ttd_pencatat_url;
-    $('#dSigPerwakilan').src = item.ttd_perwakilan_url;
+    $('#dSigPencatat').src = item.sig_pencatat_url || '';
+    $('#dSigPerwakilan').src = item.sig_perwakilan_url || '';
 
     $('#dVerifNama').value = item.verifikator || '';
     $('#dVerifCatatan').value = item.catatan_verifikasi || '';
-
-    updateDetailStatusChip(item.status);
-    updateVerifiedNote(item);
+    $('#dVerifiedNote').textContent = item.verifikator ? `Terakhir diverifikasi oleh ${item.verifikator}` : '';
 
     $('#detailOverlay').classList.add('open');
   }
 
-  function updateDetailStatusChip(status){
-    const wrap = $('#dStatusChipWrap');
-    let statusLabel = 'Menunggu Crosscheck';
-    let chipClass = 'pending';
+  function setupModalEvents(){
+    $('#dClose').addEventListener('click', () => $('#detailOverlay').classList.remove('open'));
+    
+    $('#dPhoto').addEventListener('click', () => {
+      $('#lightboxImg').src = $('#dPhoto').src;
+      $('#lightbox').classList.add('open');
+    });
 
-    if(status === 'sesuai') { statusLabel = 'Sesuai'; chipClass = 'sesuai'; }
-    else if(status === 'tidak_sesuai') { statusLabel = 'Tidak Sesuai'; chipClass = 'tidak_sesuai'; }
+    $('#lightbox').addEventListener('click', () => $('#lightbox').classList.remove('open'));
 
-    wrap.innerHTML = `<span class="chip ${chipClass}">${statusLabel}</span>`;
-  }
+    $('#btnMarkSesuai').addEventListener('click', () => updateStatus('sesuai'));
+    $('#btnMarkTidak').addEventListener('click', () => updateStatus('tidak_sesuai'));
+    $('#btnMarkPending').addEventListener('click', () => updateStatus('pending'));
 
-  function updateVerifiedNote(item){
-    const note = $('#dVerifiedNote');
-    if(item.status !== 'pending' && item.verifikator){
-      note.textContent = `Diverifikasi oleh ${item.verifikator}` + 
-        (item.catatan_verifikasi ? `: "${item.catatan_verifikasi}"` : '');
-    } else {
-      note.textContent = '';
-    }
+    // Filter pills
+    $$('#filterPills .pill').forEach(p => {       p.addEventListener('click', () => {         $$
+('#filterPills .pill').forEach(x => x.classList.remove('active'));
+        p.classList.add('active');
+        currentFilter = p.dataset.filter;
+        loadKantorData();
+      });
+    });
+
+    $('#dateFilter').value = todayISO();
+    $('#dateFilter').addEventListener('change', loadKantorData);
+    $('#searchInput').addEventListener('input', loadKantorData);
   }
 
   async function updateStatus(newStatus){
-    if(!selectedItem) return;
-    const verifNama = $('#dVerifNama').value.trim();
-    const verifCatatan = $('#dVerifCatatan').value.trim();
+    if(!selectedRecord) return;
 
-    if(newStatus === 'tidak_sesuai' && !verifCatatan){
-      toast('Catatan wajib diisi jika status ditandai tidak sesuai');
+    if(newStatus === 'tidak_sesuai' && !$('#dVerifCatatan').value.trim()){
+      toast('Wajib mengisi catatan jika menandai Tidak Sesuai!');
       return;
     }
 
-    try {
-      const updates = {
-        status: newStatus,
-        verifikator: verifNama,
-        catatan_verifikasi: verifCatatan
-      };
+    const verifikator = $('#dVerifNama').value.trim() || 'Petugas Kantor';
+    const catatanVerif = $('#dVerifCatatan').value.trim();
 
-      const { error } = await sb.from('dpm').update(updates).eq('id', selectedItem.id);
+    try {
+      const { error } = await sb.from('dpm').update({
+        status: newStatus,
+        verifikator: verifikator,
+        catatan_verifikasi: catatanVerif
+      }).eq('id', selectedRecord.id);
+
       if(error) throw error;
 
-      selectedItem.status = newStatus;
-      selectedItem.verifikator = verifNama;
-      selectedItem.catatan_verifikasi = verifCatatan;
-
-      updateDetailStatusChip(newStatus);
-      updateVerifiedNote(selectedItem);
-      toast('Status DPM berhasil diperbarui');
-      fetchList();
-
+      toast('Status berhasil diperbarui!');
+      $('#detailOverlay').classList.remove('open');
+      loadKantorData();
     } catch(err) {
-      console.error('Update status error:', err);
+      console.error(err);
       toast('Gagal memperbarui status: ' + describeError(err));
     }
   }
 
-  $('#btnMarkSesuai').addEventListener('click', () => updateStatus('sesuai'));
-  $('#btnMarkTidak').addEventListener('click', () => updateStatus('tidak_sesuai'));
-  $('#btnMarkPending').addEventListener('click', () => updateStatus('pending'));
-
-  $('#dClose').addEventListener('click', () => $('#detailOverlay').classList.remove('open'));
-  $('#detailOverlay').addEventListener('click', e => {
-    if(e.target === $('#detailOverlay')) $('#detailOverlay').classList.remove('open');
+  // Inisialisasi awal saat dokumen siap
+  document.addEventListener('DOMContentLoaded', () => {
+    initCapabilities();
+    setupSignaturePads();
+    setupFormHandlers();
+    setupTabs();
+    setupModalEvents();
   });
 
-  /* Lightbox */
-  $('#dPhoto').addEventListener('click', () => {
-    $('#lightboxImg').src = $('#dPhoto').src;
-    $('#lightbox').classList.add('open');
-  });
-  $('#lightbox').addEventListener('click', () => $('#lightbox').classList.remove('open'));
-
-  initCapabilities();
 })();
 </script>
-</body>
-</html>
