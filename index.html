@@ -1,3 +1,152 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DPM Digital & Dashboard</title>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg-color: #0d1b2a;
+      --card-bg: #1b263b;
+      --accent: #ff6b00;
+      --text: #ffffff;
+      --text-sub: #a0aec0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text);
+      margin: 0; padding: 20px;
+    }
+    .container { max-width: 600px; margin: 0 auto; }
+    .status-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .conn-dot { width: 10px; height: 10px; border-radius: 50%; background: gray; display: inline-block; }
+    .conn-dot.ok { background: #2e7d32; }
+    .conn-dot.off { background: #d32f2f; }
+    
+    .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .tab-btn { flex: 1; padding: 10px; background: var(--card-bg); color: var(--text); border: none; border-radius: 6px; cursor: pointer; }
+    .tab-btn.active { background: var(--accent); font-weight: bold; }
+    
+    .view { display: none; }
+    .view.active { display: block; }
+    
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; color: var(--text-sub); }
+    input, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; box-sizing: border-box; }
+    
+    .sig-pad-wrap { background: #fff; border-radius: 6px; height: 140px; position: relative; margin-top: 5px; }
+    .sig-pad-wrap canvas { width: 100%; height: 100%; }
+    .sig-empty-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #94a3b8; pointer-events: none; }
+    
+    .btn-submit { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+    .btn-submit:disabled { opacity: 0.5; }
+    
+    #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 1000; left: 50%; bottom: 30px; transform: translateX(-50%); }
+    #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="status-bar">
+    <h2>DPM Digital</h2>
+    <div>
+      <span id="connDot" class="conn-dot"></span>
+      <span id="connText">Menghubungkan...</span>
+    </div>
+  </div>
+
+  <div class="nav-tabs">
+    <button class="tab-btn active" data-view="lapangan">Form Lapangan</button>
+    <button class="tab-btn" data-view="kantor">Dashboard Kantor</button>
+  </div>
+
+  <!-- Form Lapangan View -->
+  <div id="view-lapangan" class="view active">
+    <form id="formLapangan">
+      <div class="form-group">
+        <label>Nama Industri / Pelanggan</label>
+        <input type="text" id="fNamaIndustri" required placeholder="Contoh: PT. Sumber Makmur">
+      </div>
+      <div class="form-group">
+        <label>No. Pelanggan</label>
+        <input type="text" id="fNoPelanggan" placeholder="ID Pelanggan">
+      </div>
+      <div class="form-group">
+        <label>Stand Meter (m³)</label>
+        <input type="number" step="any" id="fStandMeter" required placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label>Nama Petugas Pencatat</label>
+        <input type="text" id="fNamaPencatat" required placeholder="Nama Anda">
+      </div>
+      <div class="form-group">
+        <label>Nama Perwakilan Industri</label>
+        <input type="text" id="fNamaPerwakilan" required placeholder="Nama Saksi / Perwakilan">
+      </div>
+      <div class="form-group">
+        <label>Catatan Lapangan</label>
+        <textarea id="fCatatan" rows="2" placeholder="Catatan opsional..."></textarea>
+      </div>
+
+      <!-- Upload Foto -->
+      <div class="form-group">
+        <label>Foto Stand Meter</label>
+        <div id="photoDropZone" style="border: 2px dashed #334155; padding: 20px; text-align: center; cursor: pointer; border-radius: 6px;">
+          Klik di sini untuk memilih/mengambil foto
+        </div>
+        <input type="file" id="fotoInput" accept="image/*" style="display:none">
+        <div id="photoPreviewZone" style="display:none; margin-top: 10px; text-align: center;">
+          <img id="photoPreviewImg" style="max-width: 100%; max-height: 200px; border-radius: 6px;"><br>
+          <span id="photoFilenameLabel" style="font-size: 12px; color: var(--text-sub);"></span><br>
+          <button type="button" id="btnRetakePhoto" style="margin-top: 5px; padding: 5px 10px;">Ganti Foto</button>
+        </div>
+      </div>
+
+      <!-- Tanda Tangan Perwakilan -->
+      <div class="form-group">
+        <label>Tanda Tangan Perwakilan Industri</label>
+        <div class="sig-pad-wrap" data-sig="perwakilan">
+          <span class="sig-empty-hint">Tanda tangan di sini</span>
+          <canvas></canvas>
+        </div>
+        <button type="button" data-clear="perwakilan" style="margin-top: 5px; padding: 3px 8px; font-size: 12px;">Hapus Tanda Tangan</button>
+      </div>
+
+      <!-- Tanda Tangan Pencatat -->
+      <div class="form-group">
+        <label>Tanda Tangan Petugas Pencatat</label>
+        <div class="sig-pad-wrap" data-sig="pencatat">
+          <span class="sig-empty-hint">Tanda tangan di sini</span>
+          <canvas></canvas>
+        </div>
+        <button type="button" data-clear="pencatat" style="margin-top: 5px; padding: 3px 8px; font-size: 12px;">Hapus Tanda Tangan</button>
+      </div>
+
+      <button type="submit" id="btnSubmit" class="btn-submit">Kirim DPM Digital</button>
+    </form>
+  </div>
+
+  <!-- Dashboard Kantor View -->
+  <div id="view-kantor" class="view">
+    <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+      <input type="date" id="dateFilter">
+      <input type="text" id="searchInput" placeholder="Cari Industri...">
+    </div>
+    
+    <div id="kantorEmpty" style="text-align: center; color: var(--text-sub); padding: 30px;">
+      Tidak ada data DPM untuk ditampilkan.
+    </div>
+    <div id="kantorList"></div>
+  </div>
+</div>
+
+<div id="toast">Notifikasi</div>
+
+<!-- JavaScript Integration -->
 <script>
 (function(){
   "use strict";
@@ -7,6 +156,7 @@
   let toastTimer = null;
   function toast(msg){
     const t = $('#toast');
+    if(!t) return;
     t.textContent = msg;
     t.classList.add('show');
     clearTimeout(toastTimer);
@@ -19,8 +169,6 @@
     if(/row-level security|RLS/i.test(msg)) return 'Akses RLS database/storage belum diizinkan';
     if(/Bucket not found/i.test(msg)) return 'Bucket "dpm-files" belum dibuat di Supabase';
     if(/Failed to fetch|NetworkError|CORS/i.test(msg)) return 'Tidak dapat menghubungi Supabase — cek jaringan';
-    if(/JWT|Invalid API key|apikey/i.test(msg)) return 'SUPABASE_ANON_KEY tidak valid';
-    if(/relation .* does not exist/i.test(msg)) return 'Tabel "dpm" belum tersedia';
     return msg;
   }
 
@@ -31,25 +179,14 @@
 
   function todayISO(d){ d = d || new Date(); return d.toISOString().slice(0, 10); }
 
-  function fmtTanggal(iso, jam){
-    if(!iso) return '—';
-    const [y, m, d] = iso.split('-');
-    const bulan = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-    return `${parseInt(d, 10)} ${bulan[parseInt(m, 10) - 1]} ${y}` + (jam ? ' · ' + jam : '');
-  }
-
-  /* Configuration */
+  /* Supabase Configuration */
   const SUPABASE_URL = 'https://gjfkulhavzpffnpvfmel.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdqZmt1bGhhdnpwZmZucHZmbWVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3ODc5NjQsImV4cCI6MjEwNTM2Mzk2NH0.jfVgsZSy6Kk2NPkBvIOttLee-cIKd8yem9PxqpxyT_o';
   const STORAGE_BUCKET = 'dpm-files';
 
   let sb = null, capReady = false;
-  let activeTab = 'lapangan';
-  let currentFilter = 'all';
-  let selectedRecord = null;
   let rawPhotoFile = null;
 
-  // Signatures canvas state
   const sigPads = { pencatat: null, perwakilan: null };
   const sigDrawn = { pencatat: false, perwakilan: false };
 
@@ -58,61 +195,60 @@
       if (typeof supabase === 'undefined') throw new Error("Library Supabase belum dimuat.");
       sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       
-      // Tes Koneksi
       const { data, error } = await sb.from('dpm').select('id').limit(1);
       if(error && !error.message.includes('0 rows')) throw error;
 
-      $('#connDot').className = 'conn-dot ok';
-      $('#connText').textContent = 'Terhubung';
+      if($('#connDot')) $('#connDot').className = 'conn-dot ok';
+      if($('#connText')) $('#connText').textContent = 'Terhubung';
       capReady = true;
-      loadKantorData();
     } catch(err) {
-      $('#connDot').className = 'conn-dot off';
-      $('#connText').textContent = 'Offline / Error';
-      console.error("Inisialisasi Supabase Gagal:", err);
+      if($('#connDot')) $('#connDot').className = 'conn-dot off';
+      if($('#connText')) $('#connText').textContent = 'Offline / Error';
+      console.error("Inisialisasi Gagal:", err);
     }
   }
 
-  /* Canvas Signature Handlers */
   function setupSignaturePads(){
-    $$('.sig-pad-wrap').forEach(wrap => {       const type = wrap.dataset.sig;       const canvas = wrap.querySelector('canvas');       const ctx = canvas.getContext('2d');        function resize(){         const rect = wrap.getBoundingClientRect();         canvas.width = rect.width;         canvas.height = 140;         ctx.lineWidth = 2.5;         ctx.lineCap = 'round';         ctx.strokeStyle = '#0F3854';       }       resize();       window.addEventListener('resize', resize);        let drawing = false;       function getPos(e){         const rect = canvas.getBoundingClientRect();         const clientX = e.touches ? e.touches[0].clientX : e.clientX;         const clientY = e.touches ? e.touches[0].clientY : e.clientY;         return { x: clientX - rect.left, y: clientY - rect.top };       }        function start(e){         drawing = true;         const pos = getPos(e);         ctx.beginPath();         ctx.moveTo(pos.x, pos.y);         wrap.querySelector('.sig-empty-hint').style.display = 'none';         sigDrawn[type] = true;       }        function move(e){         if(!drawing) return;         const pos = getPos(e);         ctx.lineTo(pos.x, pos.y);         ctx.stroke();       }        function stop(){ drawing = false; }        canvas.addEventListener('mousedown', start);       canvas.addEventListener('mousemove', move);       window.addEventListener('mouseup', stop);        canvas.addEventListener('touchstart', (e) => { start(e); e.preventDefault(); }, {passive: false});       canvas.addEventListener('touchmove', (e) => { move(e); e.preventDefault(); }, {passive: false});       canvas.addEventListener('touchend', stop);        sigPads[type] = { canvas, ctx, wrap };     });      $$
+    $$('.sig-pad-wrap').forEach(wrap => {       const type = wrap.dataset.sig;       const canvas = wrap.querySelector('canvas');       if(!canvas) return;       const ctx = canvas.getContext('2d');        function resize(){         const rect = wrap.getBoundingClientRect();         canvas.width = rect.width \vert{}\vert{} 300;         canvas.height = 140;         ctx.lineWidth = 2.5;         ctx.lineCap = 'round';         ctx.strokeStyle = '#0F3854';       }       resize();       window.addEventListener('resize', resize);        let drawing = false;       function getPos(e){         const rect = canvas.getBoundingClientRect();         const clientX = e.touches ? e.touches[0].clientX : e.clientX;         const clientY = e.touches ? e.touches[0].clientY : e.clientY;         return { x: clientX - rect.left, y: clientY - rect.top };       }        function start(e){         drawing = true;         const pos = getPos(e);         ctx.beginPath();         ctx.moveTo(pos.x, pos.y);         const hint = wrap.querySelector('.sig-empty-hint');         if(hint) hint.style.display = 'none';         sigDrawn[type] = true;       }        function move(e){         if(!drawing) return;         const pos = getPos(e);         ctx.lineTo(pos.x, pos.y);         ctx.stroke();       }        function stop(){ drawing = false; }        canvas.addEventListener('mousedown', start);       canvas.addEventListener('mousemove', move);       window.addEventListener('mouseup', stop);        canvas.addEventListener('touchstart', (e) => { start(e); e.preventDefault(); }, {passive: false});       canvas.addEventListener('touchmove', (e) => { move(e); e.preventDefault(); }, {passive: false});       canvas.addEventListener('touchend', stop);        sigPads[type] = { canvas, ctx, wrap };     });      $$
 ('[data-clear]').forEach(btn => {
       btn.addEventListener('click', () => {
         const type = btn.dataset.clear;
         const pad = sigPads[type];
         if(pad){
           pad.ctx.clearRect(0, 0, pad.canvas.width, pad.canvas.height);
-          pad.wrap.querySelector('.sig-empty-hint').style.display = 'block';
+          const hint = pad.wrap.querySelector('.sig-empty-hint');
+          if(hint) hint.style.display = 'block';
           sigDrawn[type] = false;
         }
       });
     });
   }
 
-  /* Input Syncing & Photo Management */
   function setupFormHandlers(){
-    $('#fNamaPencatat').addEventListener('input', (e) => {
-      $('#fNamaPencatat2').value = e.target.value;
-    });
-
     const dropZone = $('#photoDropZone');
     const fileInput = $('#fotoInput');
 
-    dropZone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => {
-      if(e.target.files && e.target.files[0]){
-        handlePhotoSelect(e.target.files[0]);
-      }
-    });
+    if(dropZone && fileInput){
+      dropZone.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', (e) => {
+        if(e.target.files && e.target.files[0]){
+          handlePhotoSelect(e.target.files[0]);
+        }
+      });
+    }
 
-    $('#btnRetakePhoto').addEventListener('click', () => {
-      fileInput.value = '';
-      rawPhotoFile = null;
-      $('#photoPreviewZone').style.display = 'none';
-      dropZone.style.display = 'block';
-    });
+    if($('#btnRetakePhoto')){
+      $('#btnRetakePhoto').addEventListener('click', () => {
+        if(fileInput) fileInput.value = '';
+        rawPhotoFile = null;
+        $('#photoPreviewZone').style.display = 'none';
+        dropZone.style.display = 'block';
+      });
+    }
 
-    $('#formLapangan').addEventListener('submit', handleFormSubmit);
+    if($('#formLapangan')){
+      $('#formLapangan').addEventListener('submit', handleFormSubmit);
+    }
   }
 
   function handlePhotoSelect(file){
@@ -130,7 +266,6 @@
     reader.readAsDataURL(file);
   }
 
-  /* Helper Upload Ke Supabase Storage */
   async function uploadToStorage(blobOrFile, path){
     const { data, error } = await sb.storage.from(STORAGE_BUCKET).upload(path, blobOrFile, {
       upsert: true,
@@ -145,7 +280,6 @@
     return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
   }
 
-  /* Handle Form Submit */
   async function handleFormSubmit(e){
     e.preventDefault();
 
@@ -169,26 +303,21 @@
       const industriSlug = slugify($('#fNamaIndustri').value);
       const timestamp = now.getTime();
 
-      // 1. Upload Foto Meter
       const photoPath = `meter/${dateStr}_${industriSlug}_${timestamp}.jpg`;
       const photoUrl = await uploadToStorage(rawPhotoFile, photoPath);
 
-      // 2. Upload Tanda Tangan Pencatat
       let sigPencatatUrl = null;
       if(sigDrawn.pencatat){
         const blob = await canvasToBlob(sigPads.pencatat.canvas);
         sigPencatatUrl = await uploadToStorage(blob, `signatures/${dateStr}_${industriSlug}_pencatat_${timestamp}.jpg`);
       }
 
-      // 3. Upload Tanda Tangan Perwakilan
       const blobPerwakilan = await canvasToBlob(sigPads.perwakilan.canvas);
       const sigPerwakilanUrl = await uploadToStorage(blobPerwakilan, `signatures/${dateStr}_${industriSlug}_perwakilan_${timestamp}.jpg`);
 
-      // 4. Save Record to Database Table "dpm"
       const payload = {
         nama_industri: $('#fNamaIndustri').value,
         no_pelanggan: $('#fNoPelanggan').value || null,
-        alamat: $('#fAlamat').value || null,
         stand_meter: parseFloat($('#fStandMeter').value) || 0,
         nama_pencatat: $('#fNamaPencatat').value,
         nama_perwakilan: $('#fNamaPerwakilan').value,
@@ -205,207 +334,26 @@
       if(dbError) throw dbError;
 
       toast('Data DPM Digital berhasil disimpan!');
-      resetForm();
-      switchTab('kantor');
-
-    } catch(err) {
-      console.error(err);
-      toast('Gagal mengirim data: ' + describeError(err));
-    } finally {
-      btnSubmit.disabled = false;
-      btnSubmit.textContent = 'Kirim DPM Digital';
-    }
-  }
-
-  function resetForm(){
-    $('#formLapangan').reset();
-    $('#btnRetakePhoto').click();
-    $$('[data-clear]').forEach(b => b.click());   }    /* Navigation Tabs */   function setupTabs(){     $$
+      $('#formLapangan').reset();
+      if($('#btnRetakePhoto')) $('#btnRetakePhoto').click();
+      $$('[data-clear]').forEach(b => b.click());      } catch(err) {       console.error(err);       toast('Gagal mengirim data: ' + describeError(err));     } finally {       btnSubmit.disabled = false;       btnSubmit.textContent = 'Kirim DPM Digital';     }   }    function setupTabs(){     $$
 ('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => switchTab(btn.dataset.view));
-    });
-  }
-
-  function switchTab(viewName){
-    activeTab = viewName;
-    $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === viewName));$$
+      btn.addEventListener('click', () => {
+        const viewName = btn.dataset.view;
+        $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === viewName));$$
 ('.view').forEach(v => v.classList.toggle('active', v.id === `view-${viewName}`));
-    if(viewName === 'kantor') loadKantorData();
-  }
-
-  /* Dashboard Kantor Logic */
-  async function loadKantorData(){
-    if(!capReady) return;
-
-    const dateVal = $('#dateFilter').value || todayISO();
-    const searchVal = $('#searchInput').value.trim().toLowerCase();
-
-    let query = sb.from('dpm').select('*').order('created_at', { ascending: false });
-    if(dateVal) query = query.eq('tanggal', dateVal);
-
-    const { data, error } = await query;
-    if(error){
-      console.error(error);
-      return;
-    }
-
-    let records = data || [];
-
-    // Summary Stats
-    $('#statTotal').textContent = records.length;
-    $('#statPending').textContent = records.filter(r => r.status === 'pending').length;
-    $('#statSesuai').textContent = records.filter(r => r.status === 'sesuai').length;
-    $('#statTidak').textContent = records.filter(r => r.status === 'tidak_sesuai').length;
-
-    // Filters
-    if(currentFilter !== 'all'){
-      records = records.filter(r => r.status === currentFilter);
-    }
-    if(searchVal){
-      records = records.filter(r => (r.nama_industri || '').toLowerCase().includes(searchVal));
-    }
-
-    renderList(records);
-  }
-
-  function renderList(list){
-    const container = $('#kantorList');
-    const emptyState = $('#kantorEmpty');
-    container.innerHTML = '';
-
-    if(list.length === 0){
-      emptyState.style.display = 'block';
-      return;
-    }
-    emptyState.style.display = 'none';
-
-    list.forEach(item => {
-      const card = document.createElement('div');
-      card.className = 'row-card';
-      
-      const chipClass = item.status === 'sesuai' ? 'sesuai' : (item.status === 'tidak_sesuai' ? 'tidak_sesuai' : 'pending');
-      const statusLabel = item.status === 'sesuai' ? 'Sesuai' : (item.status === 'tidak_sesuai' ? 'Tidak Sesuai' : 'Menunggu');
-
-      card.innerHTML = `
-        <img class="row-thumb" src="${item.foto_url || ''}" alt="Thumb" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22/>'">
-        <div class="row-main">
-          <div class="row-title">${item.nama_industri}</div>
-          <div class="row-sub">
-            <span>${fmtTanggal(item.tanggal, item.jam)}</span>
-            <span>•</span>
-            <span>${item.nama_pencatat || 'Pencatat'}</span>
-          </div>
-        </div>
-        <div style="text-align:right">
-          <div class="row-meter">${item.stand_meter} m³</div>
-          <span class="chip ${chipClass}">${statusLabel}</span>
-        </div>
-      `;
-
-      card.addEventListener('click', () => openDetailSheet(item));
-      container.appendChild(card);
-    });
-  }
-
-  /* Modal Detail & Crosscheck Sheet */
-  function openDetailSheet(item){
-    selectedRecord = item;
-    $('#dTitle').textContent = item.nama_industri;
-    
-    const chipClass = item.status === 'sesuai' ? 'sesuai' : (item.status === 'tidak_sesuai' ? 'tidak_sesuai' : 'pending');
-    const statusLabel = item.status === 'sesuai' ? 'Sesuai' : (item.status === 'tidak_sesuai' ? 'Tidak Sesuai' : 'Menunggu Crosscheck');
-    $('#dStatusChipWrap').innerHTML = `<span class="chip ${chipClass}">${statusLabel}</span>`;
-
-    $('#dPhoto').src = item.foto_url || '';
-    $('#dMeter').textContent = `${item.stand_meter} m³`;
-    $('#dWaktu').textContent = fmtTanggal(item.tanggal, item.jam);
-    $('#dNoPelanggan').textContent = item.no_pelanggan || '—';
-    $('#dAlamat').textContent = item.alamat || '—';
-    $('#dPencatat').textContent = item.nama_pencatat || '—';
-    $('#dPerwakilan').textContent = item.nama_perwakilan || '—';
-
-    if(item.catatan_lapangan){
-      $('#dCatatanWrap').style.display = 'block';
-      $('#dCatatan').textContent = item.catatan_lapangan;
-    } else {
-      $('#dCatatanWrap').style.display = 'none';
-    }
-
-    $('#dSigPencatat').src = item.sig_pencatat_url || '';
-    $('#dSigPerwakilan').src = item.sig_perwakilan_url || '';
-
-    $('#dVerifNama').value = item.verifikator || '';
-    $('#dVerifCatatan').value = item.catatan_verifikasi || '';
-    $('#dVerifiedNote').textContent = item.verifikator ? `Terakhir diverifikasi oleh ${item.verifikator}` : '';
-
-    $('#detailOverlay').classList.add('open');
-  }
-
-  function setupModalEvents(){
-    $('#dClose').addEventListener('click', () => $('#detailOverlay').classList.remove('open'));
-    
-    $('#dPhoto').addEventListener('click', () => {
-      $('#lightboxImg').src = $('#dPhoto').src;
-      $('#lightbox').classList.add('open');
-    });
-
-    $('#lightbox').addEventListener('click', () => $('#lightbox').classList.remove('open'));
-
-    $('#btnMarkSesuai').addEventListener('click', () => updateStatus('sesuai'));
-    $('#btnMarkTidak').addEventListener('click', () => updateStatus('tidak_sesuai'));
-    $('#btnMarkPending').addEventListener('click', () => updateStatus('pending'));
-
-    // Filter pills
-    $$('#filterPills .pill').forEach(p => {       p.addEventListener('click', () => {         $$
-('#filterPills .pill').forEach(x => x.classList.remove('active'));
-        p.classList.add('active');
-        currentFilter = p.dataset.filter;
-        loadKantorData();
       });
     });
-
-    $('#dateFilter').value = todayISO();
-    $('#dateFilter').addEventListener('change', loadKantorData);
-    $('#searchInput').addEventListener('input', loadKantorData);
   }
 
-  async function updateStatus(newStatus){
-    if(!selectedRecord) return;
-
-    if(newStatus === 'tidak_sesuai' && !$('#dVerifCatatan').value.trim()){
-      toast('Wajib mengisi catatan jika menandai Tidak Sesuai!');
-      return;
-    }
-
-    const verifikator = $('#dVerifNama').value.trim() || 'Petugas Kantor';
-    const catatanVerif = $('#dVerifCatatan').value.trim();
-
-    try {
-      const { error } = await sb.from('dpm').update({
-        status: newStatus,
-        verifikator: verifikator,
-        catatan_verifikasi: catatanVerif
-      }).eq('id', selectedRecord.id);
-
-      if(error) throw error;
-
-      toast('Status berhasil diperbarui!');
-      $('#detailOverlay').classList.remove('open');
-      loadKantorData();
-    } catch(err) {
-      console.error(err);
-      toast('Gagal memperbarui status: ' + describeError(err));
-    }
-  }
-
-  // Inisialisasi awal saat dokumen siap
   document.addEventListener('DOMContentLoaded', () => {
     initCapabilities();
     setupSignaturePads();
     setupFormHandlers();
     setupTabs();
-    setupModalEvents();
   });
 
 })();
 </script>
+</body>
+</html>
