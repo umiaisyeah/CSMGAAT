@@ -35,7 +35,7 @@
       max-width: 650px;
     }
 
-    /* Header Bar & Logo Styling */
+    /* Header Bar */
     .header-bar {
       background: var(--card-bg);
       padding: 14px 20px;
@@ -54,12 +54,6 @@
       gap: 10px;
     }
 
-    .brand-logo {
-      height: 38px;
-      width: auto;
-      object-fit: contain;
-    }
-
     .brand-fallback-text {
       font-size: 18px;
       font-weight: 800;
@@ -74,7 +68,6 @@
       color: var(--aetra-blue-primary);
       padding: 4px 8px;
       border-radius: 12px;
-      white-space: nowrap;
     }
 
     .status-badge {
@@ -94,7 +87,6 @@
       height: 8px;
       border-radius: 50%;
       background: #94A3B8;
-      transition: background 0.3s;
     }
     .conn-dot.ok { background: #10B981; }
     .conn-dot.off { background: #EF4444; }
@@ -119,7 +111,6 @@
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s ease;
-      outline: none;
     }
 
     .tab-btn.active {
@@ -128,7 +119,6 @@
       box-shadow: 0 2px 6px rgba(255, 107, 0, 0.3);
     }
 
-    /* Views */
     .view { display: none; }
     .view.active { display: block !important; }
 
@@ -162,7 +152,6 @@
 
     input[type="text"],
     input[type="number"],
-    input[type="date"],
     textarea {
       width: 100%;
       padding: 10px 14px;
@@ -172,25 +161,44 @@
       color: var(--text-main);
       font-size: 14px;
       outline: none;
-      transition: border 0.2s;
     }
 
-    input:focus, textarea:focus {
-      border-color: var(--aetra-blue-light);
-      background: #FFFFFF;
+    /* Photo Dropzone */
+    .photo-dropzone {
+      border: 2px dashed var(--aetra-blue-light);
+      background: #F8FAFC;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      color: var(--aetra-blue-primary);
+      font-weight: 600;
+      font-size: 14px;
+      user-select: none;
+      transition: background 0.2s;
     }
 
-    /* Signature Canvas Area */
+    .photo-dropzone:hover {
+      background: #E0F2FE;
+    }
+
+    /* Canvas Tanda Tangan */
     .sig-pad-wrap {
       background: #FFFFFF;
       border: 1.5px dashed var(--aetra-blue-light);
       border-radius: 8px;
-      height: 140px;
+      height: 150px;
       position: relative;
-      touch-action: none;
+      touch-action: none; /* Penting agar layar tidak bergeser saat menggambar di HP */
     }
 
-    .sig-pad-wrap canvas { width: 100%; height: 100%; border-radius: 8px; }
+    .sig-pad-wrap canvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      display: block;
+      cursor: crosshair;
+    }
 
     .sig-empty-hint {
       position: absolute;
@@ -202,11 +210,10 @@
       pointer-events: none;
     }
 
-    /* Buttons */
     .btn-secondary {
       background: #F1F5F9;
       color: var(--text-muted);
-      border: none;
+      border: 1px solid var(--border-color);
       padding: 6px 12px;
       border-radius: 6px;
       font-size: 12px;
@@ -225,19 +232,6 @@
       font-size: 16px;
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(255, 107, 0, 0.25);
-    }
-
-    .photo-dropzone {
-      border: 2px dashed var(--border-color);
-      background: #F8FAFC;
-      border-radius: 8px;
-      padding: 20px;
-      text-align: center;
-      cursor: pointer;
-      color: var(--aetra-blue-primary);
-      font-weight: 600;
-      font-size: 13px;
     }
 
     .dpm-item {
@@ -247,24 +241,6 @@
       justify-content: space-between;
       align-items: center;
     }
-
-    #toast {
-      visibility: hidden;
-      min-width: 280px;
-      background: #1E293B;
-      color: #FFF;
-      text-align: center;
-      border-radius: 8px;
-      padding: 14px 20px;
-      position: fixed;
-      z-index: 1000;
-      left: 50%;
-      bottom: 24px;
-      transform: translateX(-50%);
-      font-size: 13px;
-    }
-
-    #toast.show { visibility: visible; }
   </style>
 </head>
 <body>
@@ -273,13 +249,7 @@
   <!-- Header Bar -->
   <div class="header-bar">
     <div class="brand-title">
-      <img 
-        src="logo-aetra.png" 
-        alt="Aetra Air Tangerang" 
-        class="brand-logo"
-        onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';"
-      >
-      <span class="brand-fallback-text" style="display:none;">AETRA</span>
+      <span class="brand-fallback-text">AETRA</span>
       <span class="app-tag">DPM Digital</span>
     </div>
     <div class="status-badge">
@@ -294,7 +264,7 @@
     <button type="button" class="tab-btn" onclick="switchTab('kantor')">Dashboard Kantor</button>
   </div>
 
-  <!-- View Form Lapangan -->
+  <!-- Form Lapangan -->
   <div id="view-lapangan" class="view active">
     <form id="formLapangan">
       <div class="card">
@@ -304,21 +274,17 @@
           <input type="text" id="fNamaIndustri" required placeholder="Contoh: PT. Mulia Glass">
         </div>
         <div class="form-group">
-          <label>No. Pelanggan</label>
-          <input type="text" id="fNoPelanggan" placeholder="00123456">
-        </div>
-        <div class="form-group">
           <label>Stand Meter (m³) *</label>
           <input type="number" step="any" id="fStandMeter" required placeholder="0.00">
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title">Dokumentasi & Catatan</div>
+        <div class="card-title">Dokumentasi Foto</div>
         <div class="form-group">
           <label>Foto Stand Meter *</label>
           <div id="photoDropZone" class="photo-dropzone">
-            📷 Ambil atau Pilih Foto Stand Meter
+            📷 Klik untuk Ambil / Pilih Foto Stand Meter
           </div>
           <input type="file" id="fotoInput" accept="image/*" style="display:none">
           <div id="photoPreviewZone" style="display:none; text-align: center; margin-top: 10px;">
@@ -326,18 +292,10 @@
             <button type="button" id="btnRetakePhoto" class="btn-secondary">Ganti Foto</button>
           </div>
         </div>
-        <div class="form-group">
-          <label>Catatan Lapangan (Opsional)</label>
-          <textarea id="fCatatan" rows="2" placeholder="Kondisi segel, posisi meter, dll..."></textarea>
-        </div>
       </div>
 
       <div class="card">
         <div class="card-title">Petugas & Verifikasi</div>
-        <div class="form-group">
-          <label>Nama Petugas Pencatat *</label>
-          <input type="text" id="fNamaPencatat" required placeholder="Nama Petugas">
-        </div>
         <div class="form-group">
           <label>Nama Perwakilan Industri *</label>
           <input type="text" id="fNamaPerwakilan" required placeholder="Nama Penanggung Jawab">
@@ -345,24 +303,24 @@
 
         <div class="form-group">
           <label>Tanda Tangan Perwakilan Industri *</label>
-          <div class="sig-pad-wrap" data-sig="perwakilan">
-            <span class="sig-empty-hint">Usap di sini untuk tanda tangan</span>
-            <canvas></canvas>
+          <div class="sig-pad-wrap">
+            <span class="sig-empty-hint" id="hint-perwakilan">Usap di sini untuk tanda tangan</span>
+            <canvas id="canvas-perwakilan"></canvas>
           </div>
-          <button type="button" data-clear="perwakilan" class="btn-secondary">Hapus Tanda Tangan</button>
+          <button type="button" onclick="clearCanvas('canvas-perwakilan', 'hint-perwakilan')" class="btn-secondary">Hapus Tanda Tangan</button>
         </div>
 
         <div class="form-group">
           <label>Tanda Tangan Petugas Pencatat</label>
-          <div class="sig-pad-wrap" data-sig="pencatat">
-            <span class="sig-empty-hint">Usap di sini untuk tanda tangan</span>
-            <canvas></canvas>
+          <div class="sig-pad-wrap">
+            <span class="sig-empty-hint" id="hint-pencatat">Usap di sini untuk tanda tangan</span>
+            <canvas id="canvas-pencatat"></canvas>
           </div>
-          <button type="button" data-clear="pencatat" class="btn-secondary">Hapus Tanda Tangan</button>
+          <button type="button" onclick="clearCanvas('canvas-pencatat', 'hint-pencatat')" class="btn-secondary">Hapus Tanda Tangan</button>
         </div>
       </div>
 
-      <button type="submit" id="btnSubmit" class="btn-submit">Kirim DPM Digital</button>
+      <button type="submit" class="btn-submit">Kirim DPM Digital</button>
     </form>
   </div>
 
@@ -370,15 +328,11 @@
   <div id="view-kantor" class="view">
     <div class="card">
       <div class="card-title">Riwayat Pencatatan DPM</div>
-      <div id="kantorStatus" style="text-align: center; color: var(--text-muted); padding: 12px;">
-        Klik tab ini untuk memuat data.
-      </div>
+      <div id="kantorStatus" style="text-align: center; color: var(--text-muted); padding: 12px;">Memuat data...</div>
       <div id="kantorList"></div>
     </div>
   </div>
 </div>
-
-<div id="toast">Notifikasi</div>
 
 <script>
   // Konfigurasi Supabase
@@ -386,11 +340,10 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdqZmt1bGhhdnpwZmZucHZmbWVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3ODc5NjQsImV4cCI6MjEwNTM2Mzk2NH0.jfVgsZSy6Kk2NPkBvIOttLee-cIKd8yem9PxqpxyT_o';
   let sb = null;
 
-  // 1. Fungsi Switch Tab (Global & Langsung Bekerja)
+  // 1. Fungsi Switch Tab
   function switchTab(viewName) {
     const btns = document.querySelectorAll('.tab-btn');
     const views = document.querySelectorAll('.view');
-
     btns.forEach(b => b.classList.remove('active'));
     views.forEach(v => v.classList.remove('active'));
 
@@ -404,35 +357,110 @@
     }
   }
 
-  // 2. Inisialisasi Koneksi Supabase dengan Timeout 3 Detik
+  // 2. Inisialisasi Supabase Status
   async function initSupabase() {
     const dot = document.getElementById('connDot');
     const text = document.getElementById('connText');
-
     try {
-      if (typeof supabase === 'undefined') throw new Error("Supabase SDK tidak termuat");
+      if (typeof supabase === 'undefined') throw new Error("SDK Unloaded");
       sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-      // Kunci timeout jika network menggantung
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout")), 3000)
-      );
-
-      await Promise.race([
-        sb.from('dpm').select('id').limit(1),
-        timeoutPromise
-      ]);
+      
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000));
+      await Promise.race([sb.from('dpm').select('id').limit(1), timeoutPromise]);
 
       dot.className = 'conn-dot ok';
       text.textContent = 'Terhubung';
     } catch (err) {
-      console.warn("Status koneksi:", err.message);
       dot.className = 'conn-dot off';
       text.textContent = 'Offline';
     }
   }
 
-  // 3. Load Data Dashboard Kantor
+  // 3. Fitur Upload & Preview Foto (Membuka Galeri/Kamera)
+  const photoDropZone = document.getElementById('photoDropZone');
+  const fotoInput = document.getElementById('fotoInput');
+  const photoPreviewZone = document.getElementById('photoPreviewZone');
+  const photoPreviewImg = document.getElementById('photoPreviewImg');
+  const btnRetakePhoto = document.getElementById('btnRetakePhoto');
+
+  photoDropZone.addEventListener('click', () => fotoInput.click());
+  btnRetakePhoto.addEventListener('click', () => fotoInput.click());
+
+  fotoInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        photoPreviewImg.src = event.target.result;
+        photoDropZone.style.display = 'none';
+        photoPreviewZone.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // 4. Logika Core Tanda Tangan Canvas
+  function initCanvas(canvasId, hintId) {
+    const canvas = document.getElementById(canvasId);
+    const hint = document.getElementById(hintId);
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#005B9E';
+    }
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    }
+
+    function startDrawing(e) {
+      isDrawing = true;
+      hint.style.display = 'none';
+      const pos = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+    }
+
+    function draw(e) {
+      if (!isDrawing) return;
+      const pos = getPos(e);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+    }
+
+    function stopDrawing() {
+      isDrawing = false;
+    }
+
+    // Support Pointer Events (Mouse, Touch Screen, Stylus Pen)
+    canvas.addEventListener('pointerdown', startDrawing);
+    canvas.addEventListener('pointermove', draw);
+    canvas.addEventListener('pointerup', stopDrawing);
+    canvas.addEventListener('pointerleave', stopDrawing);
+  }
+
+  function clearCanvas(canvasId, hintId) {
+    const canvas = document.getElementById(canvasId);
+    const hint = document.getElementById(hintId);
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    hint.style.display = 'block';
+  }
+
+  // 5. Load Data Dashboard Kantor
   async function loadDashboardData() {
     const statusEl = document.getElementById('kantorStatus');
     const listEl = document.getElementById('kantorList');
@@ -447,7 +475,6 @@
 
     try {
       const { data, error } = await sb.from('dpm').select('*').order('created_at', { ascending: false }).limit(20);
-
       if (error) throw error;
 
       if (!data || data.length === 0) {
@@ -462,7 +489,7 @@
         div.innerHTML = `
           <div>
             <strong>${item.nama_industri || 'Pelanggan'}</strong><br>
-            <small style="color:var(--text-muted);">${item.tanggal || '-'} | Stand: ${item.stand_meter || 0} m³</small>
+            <small style="color:var(--text-muted);">Stand: ${item.stand_meter || 0} m³</small>
           </div>
           <span style="font-size:12px; font-weight:bold; color:var(--aetra-blue-primary);">${item.nama_pencatat || '-'}</span>
         `;
@@ -470,14 +497,17 @@
       });
     } catch (err) {
       statusEl.style.display = 'block';
-      statusEl.textContent = 'Gagal memuat data (Tabel belum ada atau diblokir RLS).';
+      statusEl.textContent = 'Gagal memuat data dari Supabase.';
     }
   }
 
-  // Jalankan saat halaman selesai dimuat
+  // Inisialisasi saat halaman selesai dimuat
   document.addEventListener('DOMContentLoaded', () => {
     initSupabase();
+    initCanvas('canvas-perwakilan', 'hint-perwakilan');
+    initCanvas('canvas-pencatat', 'hint-pencatat');
   });
 </script>
+
 </body>
 </html>
