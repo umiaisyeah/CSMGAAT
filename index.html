@@ -3,142 +3,386 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DPM Digital & Dashboard</title>
+  <title>DPM Digital - Aetra Air Tangerang</title>
   <!-- Supabase JS Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
-      --bg-color: #0d1b2a;
-      --card-bg: #1b263b;
-      --accent: #ff6b00;
-      --text: #ffffff;
-      --text-sub: #a0aec0;
+      --aetra-blue-primary: #005B9E;  /* Biru Utama Aetra */
+      --aetra-blue-light: #00A3E0;    /* Biru Cyan Aetra */
+      --aetra-orange: #FF6B00;        /* Oranye Aksen Aetra */
+      --bg-main: #F4F7FA;             /* Latar Terang Bersih */
+      --card-bg: #FFFFFF;             /* Kartu Putih */
+      --text-main: #1E293B;           /* Teks Gelap/Jelas */
+      --text-muted: #64748B;          /* Teks Sekunder */
+      --border-color: #E2E8F0;
+      --radius: 10px;
     }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text);
-      margin: 0; padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      padding: 16px;
+      display: flex;
+      justify-content: center;
     }
-    .container { max-width: 600px; margin: 0 auto; }
-    .status-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-    .conn-dot { width: 10px; height: 10px; border-radius: 50%; background: gray; display: inline-block; }
-    .conn-dot.ok { background: #2e7d32; }
-    .conn-dot.off { background: #d32f2f; }
-    
-    .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-    .tab-btn { flex: 1; padding: 10px; background: var(--card-bg); color: var(--text); border: none; border-radius: 6px; cursor: pointer; }
-    .tab-btn.active { background: var(--accent); font-weight: bold; }
-    
+
+    .container {
+      width: 100%;
+      max-width: 650px;
+    }
+
+    /* Header Bar & Logo Styling */
+    .header-bar {
+      background: var(--card-bg);
+      padding: 14px 20px;
+      border-radius: var(--radius);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-left: 5px solid var(--aetra-blue-primary);
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      height: 38px;
+      width: auto;
+      object-fit: contain;
+    }
+
+    .brand-fallback-text {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--aetra-blue-primary);
+      letter-spacing: 0.5px;
+    }
+
+    .app-tag {
+      font-size: 11px;
+      font-weight: 700;
+      background: #E0F2FE;
+      color: var(--aetra-blue-primary);
+      padding: 4px 8px;
+      border-radius: 12px;
+      white-space: nowrap;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: #F1F5F9;
+      padding: 6px 12px;
+      border-radius: 20px;
+    }
+
+    .conn-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #94A3B8;
+    }
+    .conn-dot.ok { background: #10B981; }
+    .conn-dot.off { background: #EF4444; }
+
+    /* Navigation Tabs */
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      background: #E2E8F0;
+      padding: 4px;
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn.active {
+      background: var(--aetra-orange);
+      color: #FFFFFF;
+      box-shadow: 0 2px 6px rgba(255, 107, 0, 0.3);
+    }
+
+    /* Views & Cards */
     .view { display: none; }
     .view.active { display: block; }
-    
-    .form-group { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 5px; color: var(--text-sub); }
-    input, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; box-sizing: border-box; }
-    
-    .sig-pad-wrap { background: #fff; border-radius: 6px; height: 140px; position: relative; margin-top: 5px; }
-    .sig-pad-wrap canvas { width: 100%; height: 100%; }
-    .sig-empty-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #94a3b8; pointer-events: none; }
-    
-    .btn-submit { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px; }
-    .btn-submit:disabled { opacity: 0.5; }
-    
-    #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 1000; left: 50%; bottom: 30px; transform: translateX(-50%); }
-    #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+
+    .card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: var(--radius);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+      border: 1px solid var(--border-color);
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--aetra-blue-primary);
+      margin-bottom: 14px;
+      border-bottom: 2px solid #F1F5F9;
+      padding-bottom: 8px;
+    }
+
+    .form-group { margin-bottom: 14px; }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: #F8FAFC;
+      color: var(--text-main);
+      font-size: 14px;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--aetra-blue-light);
+      background: #FFFFFF;
+    }
+
+    /* Signature Canvas Area */
+    .sig-pad-wrap {
+      background: #FFFFFF;
+      border: 1.5px dashed var(--aetra-blue-light);
+      border-radius: 8px;
+      height: 140px;
+      position: relative;
+      touch-action: none;
+    }
+
+    .sig-pad-wrap canvas { width: 100%; height: 100%; border-radius: 8px; }
+
+    .sig-empty-hint {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #94A3B8;
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+    /* Action Buttons */
+    .btn-secondary {
+      background: #F1F5F9;
+      color: var(--text-muted);
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--aetra-orange), #E05E00);
+      color: #FFFFFF;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(255, 107, 0, 0.25);
+      transition: transform 0.1s ease;
+    }
+
+    .btn-submit:active { transform: scale(0.98); }
+    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* Photo Dropzone */
+    .photo-dropzone {
+      border: 2px dashed var(--border-color);
+      background: #F8FAFC;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      color: var(--aetra-blue-primary);
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    /* Toast Notification */
+    #toast {
+      visibility: hidden;
+      min-width: 280px;
+      background: #1E293B;
+      color: #FFF;
+      text-align: center;
+      border-radius: 8px;
+      padding: 14px 20px;
+      position: fixed;
+      z-index: 1000;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      font-size: 13px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    #toast.show {
+      visibility: visible;
+      animation: fadeInUp 0.3s forwards;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translate(-50%, 20px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <div class="status-bar">
-    <h2>DPM Digital</h2>
-    <div>
+  <!-- Header Bar dengan Logo Aetra -->
+  <div class="header-bar">
+    <div class="brand-title">
+      <img 
+        src="logo-aetra.png" 
+        alt="Aetra Air Tangerang" 
+        class="brand-logo"
+        onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';"
+      >
+      <span class="brand-fallback-text" style="display:none;">AETRA</span>
+      <span class="app-tag">DPM Digital</span>
+    </div>
+    <div class="status-badge">
       <span id="connDot" class="conn-dot"></span>
       <span id="connText">Menghubungkan...</span>
     </div>
   </div>
 
+  <!-- Navigation Tabs -->
   <div class="nav-tabs">
     <button class="tab-btn active" data-view="lapangan">Form Lapangan</button>
     <button class="tab-btn" data-view="kantor">Dashboard Kantor</button>
   </div>
 
-  <!-- Form Lapangan View -->
+  <!-- View Form Lapangan -->
   <div id="view-lapangan" class="view active">
     <form id="formLapangan">
-      <div class="form-group">
-        <label>Nama Industri / Pelanggan</label>
-        <input type="text" id="fNamaIndustri" required placeholder="Contoh: PT. Sumber Makmur">
-      </div>
-      <div class="form-group">
-        <label>No. Pelanggan</label>
-        <input type="text" id="fNoPelanggan" placeholder="ID Pelanggan">
-      </div>
-      <div class="form-group">
-        <label>Stand Meter (m³)</label>
-        <input type="number" step="any" id="fStandMeter" required placeholder="0.00">
-      </div>
-      <div class="form-group">
-        <label>Nama Petugas Pencatat</label>
-        <input type="text" id="fNamaPencatat" required placeholder="Nama Anda">
-      </div>
-      <div class="form-group">
-        <label>Nama Perwakilan Industri</label>
-        <input type="text" id="fNamaPerwakilan" required placeholder="Nama Saksi / Perwakilan">
-      </div>
-      <div class="form-group">
-        <label>Catatan Lapangan</label>
-        <textarea id="fCatatan" rows="2" placeholder="Catatan opsional..."></textarea>
-      </div>
-
-      <!-- Upload Foto -->
-      <div class="form-group">
-        <label>Foto Stand Meter</label>
-        <div id="photoDropZone" style="border: 2px dashed #334155; padding: 20px; text-align: center; cursor: pointer; border-radius: 6px;">
-          Klik di sini untuk memilih/mengambil foto
+      <div class="card">
+        <div class="card-title">Informasi Pelanggan</div>
+        <div class="form-group">
+          <label>Nama Industri / Pelanggan *</label>
+          <input type="text" id="fNamaIndustri" required placeholder="Contoh: PT. Mulia Glass">
         </div>
-        <input type="file" id="fotoInput" accept="image/*" style="display:none">
-        <div id="photoPreviewZone" style="display:none; margin-top: 10px; text-align: center;">
-          <img id="photoPreviewImg" style="max-width: 100%; max-height: 200px; border-radius: 6px;"><br>
-          <span id="photoFilenameLabel" style="font-size: 12px; color: var(--text-sub);"></span><br>
-          <button type="button" id="btnRetakePhoto" style="margin-top: 5px; padding: 5px 10px;">Ganti Foto</button>
+        <div class="form-group">
+          <label>No. Pelanggan</label>
+          <input type="text" id="fNoPelanggan" placeholder="00123456">
+        </div>
+        <div class="form-group">
+          <label>Stand Meter (m³) *</label>
+          <input type="number" step="any" id="fStandMeter" required placeholder="0.00">
         </div>
       </div>
 
-      <!-- Tanda Tangan Perwakilan -->
-      <div class="form-group">
-        <label>Tanda Tangan Perwakilan Industri</label>
-        <div class="sig-pad-wrap" data-sig="perwakilan">
-          <span class="sig-empty-hint">Tanda tangan di sini</span>
-          <canvas></canvas>
+      <div class="card">
+        <div class="card-title">Dokumentasi & Catatan</div>
+        <div class="form-group">
+          <label>Foto Stand Meter *</label>
+          <div id="photoDropZone" class="photo-dropzone">
+            📷 Ambil atau Pilih Foto Stand Meter
+          </div>
+          <input type="file" id="fotoInput" accept="image/*" style="display:none">
+          <div id="photoPreviewZone" style="display:none; text-align: center; margin-top: 10px;">
+            <img id="photoPreviewImg" style="max-width: 100%; max-height: 180px; border-radius: 8px;"><br>
+            <span id="photoFilenameLabel" style="font-size: 11px; color: var(--text-muted);"></span><br>
+            <button type="button" id="btnRetakePhoto" class="btn-secondary">Ganti Foto</button>
+          </div>
         </div>
-        <button type="button" data-clear="perwakilan" style="margin-top: 5px; padding: 3px 8px; font-size: 12px;">Hapus Tanda Tangan</button>
+        <div class="form-group">
+          <label>Catatan Lapangan (Opsional)</label>
+          <textarea id="fCatatan" rows="2" placeholder="Kondisi segel, posisi meter, dll..."></textarea>
+        </div>
       </div>
 
-      <!-- Tanda Tangan Pencatat -->
-      <div class="form-group">
-        <label>Tanda Tangan Petugas Pencatat</label>
-        <div class="sig-pad-wrap" data-sig="pencatat">
-          <span class="sig-empty-hint">Tanda tangan di sini</span>
-          <canvas></canvas>
+      <div class="card">
+        <div class="card-title">Petugas & Verifikasi</div>
+        <div class="form-group">
+          <label>Nama Petugas Pencatat *</label>
+          <input type="text" id="fNamaPencatat" required placeholder="Nama Petugas">
         </div>
-        <button type="button" data-clear="pencatat" style="margin-top: 5px; padding: 3px 8px; font-size: 12px;">Hapus Tanda Tangan</button>
+        <div class="form-group">
+          <label>Nama Perwakilan Industri *</label>
+          <input type="text" id="fNamaPerwakilan" required placeholder="Nama Penanggung Jawab">
+        </div>
+
+        <div class="form-group">
+          <label>Tanda Tangan Perwakilan Industri *</label>
+          <div class="sig-pad-wrap" data-sig="perwakilan">
+            <span class="sig-empty-hint">Usap di sini untuk tanda tangan</span>
+            <canvas></canvas>
+          </div>
+          <button type="button" data-clear="perwakilan" class="btn-secondary">Hapus Tanda Tangan</button>
+        </div>
+
+        <div class="form-group">
+          <label>Tanda Tangan Petugas Pencatat</label>
+          <div class="sig-pad-wrap" data-sig="pencatat">
+            <span class="sig-empty-hint">Usap di sini untuk tanda tangan</span>
+            <canvas></canvas>
+          </div>
+          <button type="button" data-clear="pencatat" class="btn-secondary">Hapus Tanda Tangan</button>
+        </div>
       </div>
 
       <button type="submit" id="btnSubmit" class="btn-submit">Kirim DPM Digital</button>
     </form>
   </div>
 
-  <!-- Dashboard Kantor View -->
+  <!-- View Dashboard Kantor -->
   <div id="view-kantor" class="view">
-    <div style="margin-bottom: 15px; display: flex; gap: 10px;">
-      <input type="date" id="dateFilter">
-      <input type="text" id="searchInput" placeholder="Cari Industri...">
+    <div class="card">
+      <div class="card-title">Pencarian Data DPM</div>
+      <div style="display: flex; gap: 8px;">
+        <input type="date" id="dateFilter">
+        <input type="text" id="searchInput" placeholder="Cari Pelanggan...">
+      </div>
     </div>
-    
-    <div id="kantorEmpty" style="text-align: center; color: var(--text-sub); padding: 30px;">
-      Tidak ada data DPM untuk ditampilkan.
+    <div id="kantorEmpty" class="card" style="text-align: center; color: var(--text-muted);">
+      Belum ada data DPM yang tercatat.
     </div>
     <div id="kantorList"></div>
   </div>
@@ -146,7 +390,6 @@
 
 <div id="toast">Notifikasi</div>
 
-<!-- JavaScript Integration -->
 <script>
 (function(){
   "use strict";
@@ -163,23 +406,13 @@
     toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
   }
 
-  function describeError(err){
-    if(!err) return 'Penyebab tidak diketahui';
-    const msg = err.message || err.error_description || err.statusText || String(err);
-    if(/row-level security|RLS/i.test(msg)) return 'Akses RLS database/storage belum diizinkan';
-    if(/Bucket not found/i.test(msg)) return 'Bucket "dpm-files" belum dibuat di Supabase';
-    if(/Failed to fetch|NetworkError|CORS/i.test(msg)) return 'Tidak dapat menghubungi Supabase — cek jaringan';
-    return msg;
-  }
-
   function slugify(s){
-    return (s || '').toString().trim().toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'industri';
+    return (s || '').toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'industri';
   }
 
   function todayISO(d){ d = d || new Date(); return d.toISOString().slice(0, 10); }
 
-  /* Supabase Configuration */
+  /* Configuration Supabase */
   const SUPABASE_URL = 'https://gjfkulhavzpffnpvfmel.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdqZmt1bGhhdnpwZmZucHZmbWVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3ODc5NjQsImV4cCI6MjEwNTM2Mzk2NH0.jfVgsZSy6Kk2NPkBvIOttLee-cIKd8yem9PxqpxyT_o';
   const STORAGE_BUCKET = 'dpm-files';
@@ -190,26 +423,28 @@
   const sigPads = { pencatat: null, perwakilan: null };
   const sigDrawn = { pencatat: false, perwakilan: false };
 
+  /* Inisialisasi Koneksi */
   async function initCapabilities(){
     try {
-      if (typeof supabase === 'undefined') throw new Error("Library Supabase belum dimuat.");
+      if (typeof supabase === 'undefined') throw new Error("Supabase SDK tidak ditemukan.");
       sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       
+      // Ping database Supabase
       const { data, error } = await sb.from('dpm').select('id').limit(1);
-      if(error && !error.message.includes('0 rows')) throw error;
-
-      if($('#connDot')) $('#connDot').className = 'conn-dot ok';
-      if($('#connText')) $('#connText').textContent = 'Terhubung';
+      
+      $('#connDot').className = 'conn-dot ok';
+      $('#connText').textContent = 'Terhubung';
       capReady = true;
     } catch(err) {
-      if($('#connDot')) $('#connDot').className = 'conn-dot off';
-      if($('#connText')) $('#connText').textContent = 'Offline / Error';
-      console.error("Inisialisasi Gagal:", err);
+      $('#connDot').className = 'conn-dot off';
+      $('#connText').textContent = 'Offline';
+      console.warn("Status Koneksi Supabase:", err.message);
     }
   }
 
+  /* Setup Signature Pad Canvas */
   function setupSignaturePads(){
-    $$('.sig-pad-wrap').forEach(wrap => {       const type = wrap.dataset.sig;       const canvas = wrap.querySelector('canvas');       if(!canvas) return;       const ctx = canvas.getContext('2d');        function resize(){         const rect = wrap.getBoundingClientRect();         canvas.width = rect.width \vert{}\vert{} 300;         canvas.height = 140;         ctx.lineWidth = 2.5;         ctx.lineCap = 'round';         ctx.strokeStyle = '#0F3854';       }       resize();       window.addEventListener('resize', resize);        let drawing = false;       function getPos(e){         const rect = canvas.getBoundingClientRect();         const clientX = e.touches ? e.touches[0].clientX : e.clientX;         const clientY = e.touches ? e.touches[0].clientY : e.clientY;         return { x: clientX - rect.left, y: clientY - rect.top };       }        function start(e){         drawing = true;         const pos = getPos(e);         ctx.beginPath();         ctx.moveTo(pos.x, pos.y);         const hint = wrap.querySelector('.sig-empty-hint');         if(hint) hint.style.display = 'none';         sigDrawn[type] = true;       }        function move(e){         if(!drawing) return;         const pos = getPos(e);         ctx.lineTo(pos.x, pos.y);         ctx.stroke();       }        function stop(){ drawing = false; }        canvas.addEventListener('mousedown', start);       canvas.addEventListener('mousemove', move);       window.addEventListener('mouseup', stop);        canvas.addEventListener('touchstart', (e) => { start(e); e.preventDefault(); }, {passive: false});       canvas.addEventListener('touchmove', (e) => { move(e); e.preventDefault(); }, {passive: false});       canvas.addEventListener('touchend', stop);        sigPads[type] = { canvas, ctx, wrap };     });      $$
+    $$('.sig-pad-wrap').forEach(wrap => {       const type = wrap.dataset.sig;       const canvas = wrap.querySelector('canvas');       if(!canvas) return;       const ctx = canvas.getContext('2d');        function resize(){         const rect = wrap.getBoundingClientRect();         canvas.width = rect.width \vert{}\vert{} 300;         canvas.height = 140;         ctx.lineWidth = 2.5;         ctx.lineCap = 'round';         ctx.strokeStyle = '#005B9E';       }       resize();       window.addEventListener('resize', resize);        let drawing = false;       function getPos(e){         const rect = canvas.getBoundingClientRect();         const clientX = e.touches ? e.touches[0].clientX : e.clientX;         const clientY = e.touches ? e.touches[0].clientY : e.clientY;         return { x: clientX - rect.left, y: clientY - rect.top };       }        function start(e){         drawing = true;         const pos = getPos(e);         ctx.beginPath();         ctx.moveTo(pos.x, pos.y);         const hint = wrap.querySelector('.sig-empty-hint');         if(hint) hint.style.display = 'none';         sigDrawn[type] = true;       }        function move(e){         if(!drawing) return;         const pos = getPos(e);         ctx.lineTo(pos.x, pos.y);         ctx.stroke();       }        function stop(){ drawing = false; }        canvas.addEventListener('mousedown', start);       canvas.addEventListener('mousemove', move);       window.addEventListener('mouseup', stop);        canvas.addEventListener('touchstart', (e) => { start(e); e.preventDefault(); }, {passive: false});       canvas.addEventListener('touchmove', (e) => { move(e); e.preventDefault(); }, {passive: false});       canvas.addEventListener('touchend', stop);        sigPads[type] = { canvas, ctx, wrap };     });      $$
 ('[data-clear]').forEach(btn => {
       btn.addEventListener('click', () => {
         const type = btn.dataset.clear;
@@ -224,6 +459,7 @@
     });
   }
 
+  /* Handler Event Form */
   function setupFormHandlers(){
     const dropZone = $('#photoDropZone');
     const fileInput = $('#fotoInput');
@@ -232,7 +468,15 @@
       dropZone.addEventListener('click', () => fileInput.click());
       fileInput.addEventListener('change', (e) => {
         if(e.target.files && e.target.files[0]){
-          handlePhotoSelect(e.target.files[0]);
+          rawPhotoFile = e.target.files[0];
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            $('#photoPreviewImg').src = ev.target.result;
+            dropZone.style.display = 'none';
+            $('#photoPreviewZone').style.display = 'block';
+            $('#photoFilenameLabel').textContent = `${slugify($('#fNamaIndustri').value || 'meter')}_${todayISO()}.jpg`;
+          };
+          reader.readAsDataURL(rawPhotoFile);
         }
       });
     }
@@ -251,21 +495,6 @@
     }
   }
 
-  function handlePhotoSelect(file){
-    rawPhotoFile = file;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      $('#photoPreviewImg').src = e.target.result;
-      $('#photoDropZone').style.display = 'none';
-      $('#photoPreviewZone').style.display = 'block';
-      
-      const slug = slugify($('#fNamaIndustri').value || 'meter');
-      const dateStr = todayISO();
-      $('#photoFilenameLabel').textContent = `${slug}_${dateStr}_meter.jpg`;
-    };
-    reader.readAsDataURL(file);
-  }
-
   async function uploadToStorage(blobOrFile, path){
     const { data, error } = await sb.storage.from(STORAGE_BUCKET).upload(path, blobOrFile, {
       upsert: true,
@@ -280,6 +509,7 @@
     return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
   }
 
+  /* Form Submit Handler */
   async function handleFormSubmit(e){
     e.preventDefault();
 
@@ -288,7 +518,7 @@
       return;
     }
     if(!sigDrawn.perwakilan){
-      toast('Tanda tangan perwakilan industri wajib diisi!');
+      toast('Tanda tangan perwakilan wajib diisi!');
       return;
     }
 
@@ -333,10 +563,10 @@
       const { error: dbError } = await sb.from('dpm').insert([payload]);
       if(dbError) throw dbError;
 
-      toast('Data DPM Digital berhasil disimpan!');
+      toast('Data DPM Digital berhasil dikirim!');
       $('#formLapangan').reset();
       if($('#btnRetakePhoto')) $('#btnRetakePhoto').click();
-      $$('[data-clear]').forEach(b => b.click());      } catch(err) {       console.error(err);       toast('Gagal mengirim data: ' + describeError(err));     } finally {       btnSubmit.disabled = false;       btnSubmit.textContent = 'Kirim DPM Digital';     }   }    function setupTabs(){     $$
+      $$('[data-clear]').forEach(b => b.click());      } catch(err) {       console.error(err);       toast('Gagal mengirim: ' + (err.message \vert{}\vert{} 'Periksa koneksi/RLS Supabase'));     } finally {       btnSubmit.disabled = false;       btnSubmit.textContent = 'Kirim DPM Digital';     }   }    function setupTabs(){     $$
 ('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const viewName = btn.dataset.view;
